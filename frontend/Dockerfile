@@ -6,8 +6,7 @@ WORKDIR /app
 RUN npm install -g serve
 
 COPY frontend/package*.json ./
-COPY frontend/yarn.lock ./
-COPY frontend/node_modules ./node_modules
+RUN yarn install --network-timeout 600000
 COPY frontend/ .
 
 RUN rm -f .env 
@@ -28,7 +27,6 @@ ARG REACT_APP_TAB_NAME
 ENV REACT_APP_TAB_NAME=$REACT_APP_TAB_NAME
 
 RUN mkdir -p ./brands
-COPY brands ./brands
 
 COPY frontend/copy_brand_assets.sh ./
 RUN chmod +x copy_brand_assets.sh

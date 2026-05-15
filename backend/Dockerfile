@@ -13,8 +13,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN rm -f package-lock.json
 
 COPY backend/package*.json ./
-COPY backend/yarn.lock ./
-COPY backend/node_modules ./node_modules
+RUN yarn install --network-timeout 600000
 COPY backend/ .
 
 # Configure git to use HTTPS instead of SSH
@@ -22,7 +21,7 @@ RUN git config --global url."https://".insteadOf ssh://
 
 RUN yarn add fluent-ffmpeg @ffmpeg-installer/ffmpeg
 
-COPY certificates ./certs-temp
+RUN mkdir -p ./certs-temp
 
 COPY backend/copy_cert_assets.sh ./
 RUN chmod +x copy_cert_assets.sh
