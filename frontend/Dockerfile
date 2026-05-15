@@ -3,6 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install serve globally
+RUN apk add --no-cache bash
 RUN npm install -g serve
 
 COPY frontend/package*.json ./
