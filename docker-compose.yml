@@ -65,8 +65,8 @@ services:
     image: postgres:14-alpine
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres123
-      - POSTGRES_DB=codatende
+      - POSTGRES_PASSWORD=${DB_PASS:-postgres123}
+      - POSTGRES_DB=${DB_NAME:-sinapcrm}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
