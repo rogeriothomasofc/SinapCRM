@@ -1,0 +1,607 @@
+import React, { useState, useContext, useEffect } from "react";
+import clsx from "clsx";
+import {
+  makeStyles,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Typography,
+  Divider,
+  MenuItem,
+  IconButton,
+  Menu,
+  useTheme,
+  useMediaQuery,
+  Avatar,
+  Box,
+  Tooltip,
+  List,
+} from "@material-ui/core";
+
+// Modern Icons - Usando ícones mais modernos e minimalistas
+import MenuOpenIcon from "@material-ui/icons/MenuOpen";
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import AccountCircleOutlinedIcon from "@material-ui/icons/AccountCircleOutlined";
+import RefreshOutlinedIcon from "@material-ui/icons/RefreshOutlined";
+import NotificationsNoneOutlinedIcon from "@material-ui/icons/NotificationsNoneOutlined";
+import PowerSettingsNewOutlinedIcon from "@material-ui/icons/PowerSettingsNewOutlined";
+import PersonOutlineIcon from "@material-ui/icons/PersonOutline";
+import Brightness4OutlinedIcon from '@material-ui/icons/Brightness4Outlined';
+import Brightness7OutlinedIcon from '@material-ui/icons/Brightness7Outlined';
+import LanguageOutlinedIcon from "@material-ui/icons/LanguageOutlined";
+import VolumeUpOutlinedIcon from "@material-ui/icons/VolumeUpOutlined";
+import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
+import AnnouncementOutlinedIcon from "@material-ui/icons/AnnouncementOutlined";
+import SyncOutlinedIcon from "@material-ui/icons/SyncOutlined";
+import TranslateOutlinedIcon from "@material-ui/icons/TranslateOutlined";
+import AccountBoxOutlinedIcon from "@material-ui/icons/AccountBoxOutlined";
+import ExitToAppOutlinedIcon from "@material-ui/icons/ExitToAppOutlined";
+import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined';
+import NightsStayOutlinedIcon from '@material-ui/icons/NightsStayOutlined';
+import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
+import SettingsOutlinedIcon from '@material-ui/icons/SettingsOutlined';
+
+import MainListItems from "./MainListItems";
+import NotificationsPopOver from "../components/NotificationsPopOver";
+import NotificationsVolume from "../components/NotificationsVolume";
+import UserModal from "../components/UserModal";
+import { AuthContext } from "../context/Auth/AuthContext";
+import BackdropLoading from "../components/BackdropLoading";
+import { i18n } from "../translate/i18n";
+import toastError from "../errors/toastError";
+import AnnouncementsPopover from "../components/AnnouncementsPopover";
+
+import logo from "../assets/logo.png";
+import { SocketContext } from "../context/Socket/SocketContext";
+import { useWhitelabel } from "../context/Whitelabel/WhitelabelContext";
+import ChatPopover from "../pages/Chat/ChatPopover";
+
+import { useDate } from "../hooks/useDate";
+
+import ColorModeContext from "../layout/themeContext";
+import LanguageControl from "../components/LanguageControl";
+
+const drawerWidth = 230;
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    height: "100vh",
+    [theme.breakpoints.down("sm")]: {
+      height: "calc(100vh - 56px)",
+    },
+    backgroundColor: theme.palette.fancyBackground,
+    '& .MuiButton-outlinedPrimary': {
+      color: theme.mode === 'light' ? '#FFF' : '#FFF',
+      backgroundColor: theme.mode === 'light' ? theme.palette.primary.main : '#1c1c1c',
+    },
+    '& .MuiTab-textColorPrimary.Mui-selected': {
+      color: theme.mode === 'light' ? 'Primary' : '#FFF',
+    },
+    // Estilos globais de scrollbar melhorados
+    '& ::-webkit-scrollbar': {
+      width: '6px',
+      height: '6px',
+    },
+    '& ::-webkit-scrollbar-track': {
+      background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      borderRadius: '3px',
+    },
+    '& ::-webkit-scrollbar-thumb': {
+      background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+      borderRadius: '3px',
+      '&:hover': {
+        background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+      },
+    },
+    '& ::-webkit-scrollbar-corner': {
+      background: 'transparent',
+    },
+  },
+  toolbar: {
+    paddingRight: 24,
+    paddingLeft: ({ drawerOpen }) => drawerOpen ? drawerWidth + 24 : 24 + 72,
+    minHeight: 48,
+    backgroundColor: "transparent",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    transition: theme.transitions.create(["padding"], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  appBar: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 48,
+    zIndex: theme.zIndex.drawer - 1,
+    backgroundColor: theme.mode === 'dark' ? "rgba(28, 28, 28, 0.8)" : "rgba(255, 255, 255, 0.8)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    boxShadow: "none",
+    borderBottom: theme.mode === 'dark' ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(0, 0, 0, 0.08)",
+    "& .MuiIconButton-root": {
+      color: theme.palette.primary.main + " !important",
+    },
+    "& .MuiSvgIcon-root": {
+      color: theme.palette.primary.main + " !important",
+    },
+    "& svg": {
+      color: theme.palette.primary.main + " !important",
+    },
+  },
+  appBarShift: {
+    // Removemos completamente as transições e margens
+    // A barra sempre fica na mesma posição
+  },
+  menuButton: {
+    position: "fixed",
+    top: theme.spacing(2),
+    left: ({ drawerOpen }) => drawerOpen 
+      ? drawerWidth - 15
+      : theme.spacing(7) - 15,
+    zIndex: theme.zIndex.drawer + 2,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    width: 30,
+    height: 30,
+    padding: 0,
+    transition: theme.transitions.create(['left'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    borderRadius: "50%",
+    color: theme.palette.primary.main,
+    opacity: 1,
+    "&:hover": {
+      backgroundColor: theme.palette.background.paper,
+      opacity: 1,
+    },
+    "& .MuiSvgIcon-root": {
+      color: theme.palette.primary.main,
+      fontSize: 18,
+    },
+    [theme.breakpoints.up("sm")]: {
+      left: ({ drawerOpen }) => drawerOpen 
+        ? drawerWidth - 15
+        : theme.spacing(9) - 15,
+    },
+  },
+  title: {
+    flexGrow: 1,
+    fontSize: 14,
+    fontWeight: 500,
+    color: theme.palette.primary.main,
+    lineHeight: 1.2,
+  },
+  drawerPaper: {
+    position: "relative",
+    height: "100%",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
+    borderRight: "none",
+    overflowX: "hidden",
+    zIndex: theme.zIndex.drawer,
+    display: "flex",
+    flexDirection: "column",
+  },
+  drawerPaperClose: {
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+    [theme.breakpoints.up("sm")]: {
+      width: theme.spacing(9),
+    },
+  },
+  appBarSpacer: {
+    minHeight: 48,
+  },
+  content: {
+    flex: 1,
+    overflow: "auto",
+    paddingTop: 48,
+  },
+  containerWithScroll: {
+    flex: 1,
+    padding: theme.spacing(1),
+    overflowY: "auto",
+    "& .MuiListItemText-primary": {
+      fontSize: "14px",
+      fontWeight: 500,
+    },
+    "& .MuiListItemIcon-root": {
+      minWidth: 40,
+    },
+    "& .MuiListItem-root.Mui-selected": {
+      backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+      "&:hover": {
+        backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+      },
+      "& .MuiListItemText-primary": {
+        color: theme.mode === 'dark' ? '#fff' : theme.palette.text.primary,
+        fontWeight: 600,
+      },
+      "& .MuiListItemIcon-root": {
+        color: theme.mode === 'dark' ? '#fff' : theme.palette.primary.main,
+      },
+    },
+  },
+  logo: {
+    height: 60, //tava 40
+    maxWidth: ({ drawerOpen }) => drawerOpen ? 180 : 40, //tava 140
+    objectFit: "contain",
+    transition: "max-width 0.3s",
+  },
+  toolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: "0 16px",
+    minHeight: "64px",
+    [theme.breakpoints.down("sm")]: {
+      minHeight: "56px",
+    }
+  },
+  iconButtonLabel: {
+    fontSize: 20,
+    color: theme.palette.primary.main,
+    transition: "transform 0.2s ease",
+  },
+  iconButton: {
+    padding: 6,
+    margin: theme.spacing(0, 0.25),
+    color: theme.palette.primary.main,
+    "&:hover": {
+      backgroundColor: theme.mode === 'light' ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.08)",
+      "& .MuiSvgIcon-root": {
+        transform: "scale(1.1)",
+      },
+    },
+    "& .MuiSvgIcon-root": {
+      color: theme.palette.primary.main,
+      transition: "transform 0.2s ease",
+    },
+  },
+  listWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    height: "calc(100% - 64px)",
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+  versionInfo: {
+    fontSize: 12,
+    padding: theme.spacing(1, 2),
+    textAlign: "right",
+    fontWeight: 500,
+    color: theme.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
+  }
+}));
+
+const LoggedInLayout = ({ children, themeToggle }) => {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const classes = useStyles({ drawerOpen });
+  
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { handleLogout, loading } = useContext(AuthContext);
+  const [drawerVariant, setDrawerVariant] = useState("permanent");
+  const { user } = useContext(AuthContext);
+
+  const theme = useTheme();
+  const { logoUrl, name: wlName } = useWhitelabel();
+  const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+  const resolvedLogo = logoUrl ? `${backendUrl}${logoUrl}` : logo;
+  const { colorMode } = useContext(ColorModeContext);
+  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
+
+  const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
+
+  const { dateToClient } = useDate();
+
+  // Languages
+  const [anchorElLanguage, setAnchorElLanguage] = useState(null);
+  const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
+
+  const socketManager = useContext(SocketContext);
+
+  useEffect(() => {
+    if (document.body.offsetWidth > 1200) {
+      setDrawerOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerVariant("temporary");
+    } else {
+      setDrawerVariant("permanent");
+    }
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    const userId = localStorage.getItem("userId");
+
+    const socket = socketManager.getSocket(companyId);
+
+    socket.on(`company-${companyId}-auth`, (data) => {
+      if (data.user.id === +userId) {
+        toastError("Sua conta foi acessada em outro computador.");
+        setTimeout(() => {
+          localStorage.clear();
+          window.location.reload();
+        }, 1000);
+      }
+    });
+
+    socket.emit("userStatus");
+    const interval = setInterval(() => {
+      socket.emit("userStatus");
+    }, 1000 * 60 * 5);
+
+    return () => {
+      socket.disconnect();
+      clearInterval(interval);
+    };
+  }, [socketManager]);
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+    setMenuOpen(true);
+  };
+
+  const handlemenuLanguage = (event) => {
+    setAnchorElLanguage(event.currentTarget);
+    setMenuLanguageOpen(true);
+  }
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setMenuOpen(false);
+  };
+
+  const handleCloseMenuLanguage = () => {
+    setAnchorElLanguage(null);
+    setMenuLanguageOpen(false);
+  }
+
+  const handleOpenUserModal = () => {
+    setUserModalOpen(true);
+    handleCloseMenu();
+  };
+
+  const handleClickLogout = () => {
+    handleCloseMenu();
+    handleLogout();
+  };
+
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const drawerClose = () => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerOpen(false);
+    }
+  };
+
+  const handleRefreshPage = () => {
+    window.location.reload(false);
+  }
+
+  const toggleColorMode = () => {
+    colorMode.toggleColorMode();
+  }
+
+  const getUserInitials = (name) => {
+    if (!name) return "U";
+    const names = name.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  };
+
+  if (loading) {
+    return <BackdropLoading />;
+  }
+
+  return (
+    <div className={classes.root}>
+      <Drawer
+        variant={drawerVariant}
+        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        classes={{
+          paper: clsx(
+            classes.drawerPaper,
+            !drawerOpen && classes.drawerPaperClose
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          <img src={resolvedLogo} className={classes.logo} alt={wlName || "logo"} />
+        </div>
+        
+        <div className={classes.listWrapper}>
+          <List className={classes.containerWithScroll}>
+            <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+          </List>
+          
+          {drawerOpen && (
+            <>
+              <Typography className={classes.versionInfo}>
+                v8.0.1
+              </Typography>
+            </>
+          )}
+        </div>
+      </Drawer>
+      
+      <UserModal
+        open={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        userId={user?.id}
+      />
+      
+      <AppBar
+        position="fixed"
+        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        elevation={0}
+      >
+        <Toolbar className={classes.toolbar}>
+          <Typography
+            component="h1"
+            variant="h6"
+            color="inherit"
+            noWrap
+            className={classes.title}
+          >
+            {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
+              <>
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>! ({i18n.t("mainDrawer.appBar.greeting.active")} {dateToClient(user?.company?.dueDate)})
+              </>
+            ) : (
+              <>
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>!
+              </>
+            )}
+          </Typography>
+          
+          <Box display="flex" alignItems="center">
+            <Tooltip title={i18n.t("mainDrawer.appBar.language")}>
+              <IconButton
+                className={classes.iconButton}
+                onClick={handlemenuLanguage}
+              >
+                <TranslateOutlinedIcon className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="menu-appbar-language"
+              anchorEl={anchorElLanguage}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuLanguageOpen}
+              onClose={handleCloseMenuLanguage}
+            >
+              <MenuItem>
+                <LanguageControl />
+              </MenuItem>
+            </Menu>
+            
+            <Tooltip title={theme.mode === 'dark' ? i18n.t("mainDrawer.appBar.lightMode") : i18n.t("mainDrawer.appBar.darkMode")}>
+              <IconButton
+                className={classes.iconButton}
+                onClick={toggleColorMode}
+              >
+                {theme.mode === 'dark' ? 
+                  <WbSunnyOutlinedIcon className={classes.iconButtonLabel} /> : 
+                  <NightsStayOutlinedIcon className={classes.iconButtonLabel} />
+                }
+              </IconButton>
+            </Tooltip>
+
+            <NotificationsVolume
+              setVolume={setVolume}
+              volume={volume}
+            />
+
+            <Tooltip title={i18n.t("mainDrawer.appBar.refresh")}>
+              <IconButton
+                className={classes.iconButton}
+                onClick={handleRefreshPage}
+              >
+                <SyncOutlinedIcon className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+
+            {user.id && (
+              <NotificationsPopOver volume={volume} />
+            )}
+
+            <AnnouncementsPopover />
+
+            <ChatPopover 
+              iconButton={
+                <Tooltip title="Chat">
+                  <IconButton className={classes.iconButton}>
+                    <ChatBubbleOutlineIcon className={classes.iconButtonLabel} style={{ color: theme.palette.primary.main }} />
+                  </IconButton>
+                </Tooltip>
+              }
+            />
+
+            <Tooltip title={i18n.t("mainDrawer.appBar.user.profile")}>
+              <IconButton
+                className={classes.iconButton}
+                onClick={handleMenu}
+              >
+                <AccountBoxOutlinedIcon className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuOpen}
+              onClose={handleCloseMenu}
+            >
+              <MenuItem onClick={handleOpenUserModal}>
+                <PersonOutlineIcon fontSize="small" style={{ marginRight: 8 }} />
+                {i18n.t("mainDrawer.appBar.user.profile")}
+              </MenuItem>
+              <MenuItem onClick={handleClickLogout}>
+                <ExitToAppOutlinedIcon fontSize="small" style={{ marginRight: 8 }} />
+                {i18n.t("mainDrawer.appBar.user.logout")}
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </AppBar>
+      
+      {/* Botão flutuante do menu */}
+      <Tooltip title={drawerOpen ? "Recolher menu" : "Expandir menu"}>
+        <IconButton
+          className={classes.menuButton}
+          onClick={handleDrawerToggle}
+        >
+          {drawerOpen ? <ChevronLeftIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
+        </IconButton>
+      </Tooltip>
+      
+      <main className={classes.content}>
+        {children ? children : null}
+      </main>
+    </div>
+  );
+};
+
+export default LoggedInLayout;

@@ -1,0 +1,402 @@
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { useHistory } from "react-router-dom";
+
+// Material UI imports atualizados para usar @mui/material em vez de @material-ui/core
+import { styled } from "@mui/material/styles";
+import {
+  Paper,
+  InputBase,
+  Tabs,
+  Tab,
+  Badge,
+  FormControlLabel,
+  Switch,
+  Button,
+  IconButton,
+  Chip,
+  Box,
+  Tooltip,
+  Divider,
+} from "@mui/material";
+
+// Ícones modernos do MUI
+import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import SearchIcon from "@mui/icons-material/Search";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
+import PriorityHighIcon from "@mui/icons-material/PriorityHigh";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+
+// Componentes existentes
+import NewTicketModal from "../NewTicketModal";
+import TicketsList from "../TicketsListCustom";
+import TabPanel from "../TabPanel";
+import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { Can } from "../Can";
+import TicketsQueueSelect from "../TicketsQueueSelect";
+import { TagsFilter } from "../TagsFilter";
+import { UsersFilter } from "../UsersFilter";
+
+// Estilização moderna usando styled do MUI
+const StyledTicketsWrapper = styled(Paper)(({ theme }) => ({
+  position: "relative",
+  display: "flex",
+  height: "100%",
+  flexDirection: "column",
+  overflow: "hidden",
+  borderRadius: 8,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+  backgroundColor: theme.palette.mode === "dark" ? "#1e1e2d" : "#ffffff",
+}));
+
+const StyledTabsHeader = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: "8px 16px",
+  backgroundColor: theme.palette.mode === "dark" ? "#2b2b40" : "#f5f6fa",
+  borderBottom: `1px solid ${theme.palette.mode === "dark" ? "#32324a" : "#e6e8f0"}`,
+}));
+
+const StyledTabs = styled(Tabs)(({ theme }) => ({
+  minHeight: 42,
+  "& .MuiTabs-indicator": {
+    height: 3,
+    borderRadius: 3,
+  },
+}));
+
+const StyledTab = styled(Tab)(({ theme }) => ({
+  minHeight: 42,
+  fontWeight: 500,
+  fontSize: 13,
+  minWidth: 100,
+  textTransform: "none",
+  borderRadius: 20,
+  margin: "0 4px",
+  padding: "0 12px",
+  color: theme.palette.mode === "dark" ? "#9899ac" : "#7e8299",
+  "&.Mui-selected": {
+    color: theme.palette.primary.main,
+    fontWeight: 600,
+  },
+}));
+
+const StyledSearchBox = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: "8px 16px",
+  backgroundColor: theme.palette.mode === "dark" ? "#1e1e2d" : "#ffffff",
+  borderBottom: `1px solid ${theme.palette.mode === "dark" ? "#32324a" : "#e6e8f0"}`,
+}));
+
+const SearchInputWrapper = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  padding: "6px 12px",
+  borderRadius: 24,
+  backgroundColor: theme.palette.mode === "dark" ? "#2b2b40" : "#f5f6fa",
+  marginRight: theme.spacing(1),
+}));
+
+const ModernTicketsManagerTabs = () => {
+  const history = useHistory();
+
+  const [searchParam, setSearchParam] = useState("");
+  const [tab, setTab] = useState("open");
+  const [tabOpen, setTabOpen] = useState("open");
+  const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
+  const [showAllTickets, setShowAllTickets] = useState(false);
+  const searchInputRef = useRef();
+  const { user } = useContext(AuthContext);
+  const { profile } = user;
+
+  const [openCount, setOpenCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const userQueueIds = user.queues.map((q) => q.id);
+  const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    if (user.profile.toUpperCase() === "ADMIN") {
+      setShowAllTickets(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (tab === "search") {
+      searchInputRef.current.focus();
+    }
+  }, [tab]);
+
+  let searchTimeout;
+
+  const handleSearch = (e) => {
+    const searchedTerm = e.target.value.toLowerCase();
+
+    clearTimeout(searchTimeout);
+
+    if (searchedTerm === "") {
+      setSearchParam(searchedTerm);
+      setTab("open");
+      return;
+    }
+
+    searchTimeout = setTimeout(() => {
+      setSearchParam(searchedTerm);
+    }, 500);
+  };
+
+  const handleChangeTab = (e, newValue) => {
+    setTab(newValue);
+  };
+
+  const handleChangeTabOpen = (e, newValue) => {
+    setTabOpen(newValue);
+  };
+
+  const applyPanelStyle = (status) => {
+    if (tabOpen !== status) {
+      return { width: 0, height: 0 };
+    }
+  };
+
+  const handleCloseOrOpenTicket = (ticket) => {
+    setNewTicketModalOpen(false);
+    if (ticket !== undefined && ticket.uuid !== undefined) {
+      history.push(`/tickets/${ticket.uuid}`);
+    }
+  };
+
+  const handleSelectedTags = (selecteds) => {
+    const tags = selecteds.map((t) => t.id);
+    setSelectedTags(tags);
+  };
+
+  const handleSelectedUsers = (selecteds) => {
+    const users = selecteds.map((t) => t.id);
+    setSelectedUsers(users);
+  };
+  
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  return (
+    <StyledTicketsWrapper elevation={0}>
+      <NewTicketModal
+        modalOpen={newTicketModalOpen}
+        onClose={(ticket) => {
+          handleCloseOrOpenTicket(ticket);
+        }}
+      />
+
+      {/* Header com tabs principal */}
+      <StyledTabsHeader>
+        <StyledTabs
+          value={tab}
+          onChange={handleChangeTab}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <StyledTab
+            value="open"
+            icon={
+              <Badge badgeContent={openCount + pendingCount} color="primary">
+                <InboxOutlinedIcon fontSize="small" />
+              </Badge>
+            }
+            label={i18n.t("tickets.tabs.open.title")}
+            iconPosition="start"
+          />
+          <StyledTab
+            value="closed"
+            icon={<CheckCircleOutlineIcon fontSize="small" />}
+            label={i18n.t("tickets.tabs.closed.title")}
+            iconPosition="start"
+          />
+          <StyledTab
+            value="search"
+            icon={<SearchIcon fontSize="small" />}
+            label={i18n.t("tickets.tabs.search.title")}
+            iconPosition="start"
+          />
+        </StyledTabs>
+        
+        {tab !== "search" && (
+          <Tooltip title={i18n.t("ticketsManager.buttons.newTicket")}>
+            <IconButton
+              color="primary"
+              onClick={() => setNewTicketModalOpen(true)}
+              size="small"
+              sx={{ ml: "auto" }}
+            >
+              <AddCircleOutlineIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+      </StyledTabsHeader>
+
+      {/* Search bar e filtros */}
+      <StyledSearchBox>
+        {tab === "search" ? (
+          <SearchInputWrapper>
+            <SearchIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} />
+            <InputBase
+              fullWidth
+              inputRef={searchInputRef}
+              placeholder={i18n.t("tickets.search.placeholder")}
+              type="search"
+              onChange={handleSearch}
+              sx={{ fontSize: 14 }}
+            />
+          </SearchInputWrapper>
+        ) : (
+          <>
+            {tab === "open" && (
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Chip
+                  icon={<InboxOutlinedIcon fontSize="small" />}
+                  label={`${i18n.t("ticketsList.assignedHeader")} (${openCount})`}
+                  color={tabOpen === "open" ? "primary" : "default"}
+                  variant={tabOpen === "open" ? "filled" : "outlined"}
+                  onClick={() => setTabOpen("open")}
+                  clickable
+                  sx={{ mr: 1 }}
+                />
+                <Chip
+                  icon={<PriorityHighIcon fontSize="small" />}
+                  label={`${i18n.t("ticketsList.pendingHeader")} (${pendingCount})`}
+                  color={tabOpen === "pending" ? "error" : "default"}
+                  variant={tabOpen === "pending" ? "filled" : "outlined"}
+                  onClick={() => setTabOpen("pending")}
+                  clickable
+                />
+              </Box>
+            )}
+            
+            <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+              <Can
+                role={user.profile}
+                perform="tickets-manager:showall"
+                yes={() => (
+                  <FormControlLabel
+                    sx={{ mr: 1 }}
+                    label={
+                      <Box component="span" sx={{ fontSize: 13 }}>
+                        {i18n.t("tickets.buttons.showAll")}
+                      </Box>
+                    }
+                    labelPlacement="start"
+                    control={
+                      <Switch
+                        size="small"
+                        checked={showAllTickets}
+                        onChange={() => setShowAllTickets((prevState) => !prevState)}
+                        name="showAllTickets"
+                        color="primary"
+                      />
+                    }
+                  />
+                )}
+              />
+              
+              <Tooltip title={i18n.t("ticketsManager.tooltips.filters")}>
+                <IconButton 
+                  size="small" 
+                  color={showFilters ? "primary" : "default"}
+                  onClick={toggleFilters}
+                >
+                  <FilterAltOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </>
+        )}
+      </StyledSearchBox>
+      
+      {/* Filtros expandidos */}
+      {showFilters && (
+        <Box sx={{ 
+          p: 1, 
+          display: "flex", 
+          flexWrap: "wrap",
+          alignItems: "center", 
+          gap: 1,
+          borderBottom: (theme) => `1px solid ${theme.palette.mode === "dark" ? "#32324a" : "#e6e8f0"}`,
+          backgroundColor: (theme) => theme.palette.mode === "dark" ? "#1e1e2d" : "#f8f9fa",
+        }}>
+          <TicketsQueueSelect
+            selectedQueueIds={selectedQueueIds}
+            userQueues={user?.queues}
+            onChange={(values) => setSelectedQueueIds(values)}
+            size="small"
+          />
+          
+          {tab === "search" && (
+            <>
+              <TagsFilter onFiltered={handleSelectedTags} size="small" />
+              {profile === "admin" && (
+                <UsersFilter onFiltered={handleSelectedUsers} size="small" />
+              )}
+            </>
+          )}
+        </Box>
+      )}
+
+      {/* Conteúdo das abas */}
+      <TabPanel value={tab} name="open" sx={{ flex: 1, overflow: "auto", pt: 0 }}>
+        <Box sx={{ display: "none" }}>
+          <Tabs
+            value={tabOpen}
+            onChange={handleChangeTabOpen}
+          >
+            <Tab value="open" />
+            <Tab value="pending" />
+          </Tabs>
+        </Box>
+        <Box sx={{ height: "100%", overflow: "hidden" }}>
+          <TicketsList
+            status="open"
+            showAll={showAllTickets}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setOpenCount(val)}
+            style={applyPanelStyle("open")}
+          />
+          <TicketsList
+            status="pending"
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setPendingCount(val)}
+            style={applyPanelStyle("pending")}
+          />
+        </Box>
+      </TabPanel>
+      
+      <TabPanel value={tab} name="closed" sx={{ flex: 1, overflow: "auto", pt: 0 }}>
+        <TicketsList
+          status="closed"
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+        />
+      </TabPanel>
+      
+      <TabPanel value={tab} name="search" sx={{ flex: 1, overflow: "auto", pt: 0 }}>
+        <TicketsList
+          searchParam={searchParam}
+          showAll={true}
+          tags={selectedTags}
+          users={selectedUsers}
+          selectedQueueIds={selectedQueueIds}
+        />
+      </TabPanel>
+    </StyledTicketsWrapper>
+  );
+};
+
+export default ModernTicketsManagerTabs;

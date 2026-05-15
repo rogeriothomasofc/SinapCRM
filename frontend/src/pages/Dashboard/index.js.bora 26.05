@@ -1,0 +1,863 @@
+import React, { useState, useEffect } from "react";
+import { makeStyles } from "@material-ui/core/styles";
+import {
+  Container,
+  Grid,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  TextField,
+  Typography,
+  Paper,
+  Box,
+  Fade,
+  useTheme,
+  useMediaQuery,
+  Card,
+  Avatar,
+  Chip,
+  IconButton,
+  Collapse,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  LinearProgress,
+  Checkbox,
+  CircularProgress,
+} from "@material-ui/core";
+
+// Ícones
+import TrendingUpIcon from "@material-ui/icons/TrendingUp";
+import TrendingDownIcon from "@material-ui/icons/TrendingDown";
+import MoreVertIcon from "@material-ui/icons/MoreVert";
+import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+import CalendarTodayIcon from "@material-ui/icons/CalendarToday";
+import ChatIcon from "@material-ui/icons/Chat";
+import PeopleIcon from "@material-ui/icons/People";
+import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
+import TimerIcon from "@material-ui/icons/Timer";
+import BarChartIcon from "@material-ui/icons/BarChart";
+import TimelineIcon from "@material-ui/icons/Timeline";
+import FilterListIcon from "@material-ui/icons/FilterList";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import ExpandLessIcon from "@material-ui/icons/ExpandLess";
+
+// Gráficos
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+
+import { toast } from "react-toastify";
+import { isEmpty, isArray } from "lodash";
+import moment from "moment";
+
+import ButtonWithSpinner from "../../components/ButtonWithSpinner";
+import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
+import { ChatsUser } from "./ChartsUser";
+import { ChartsDate } from "./ChartsDate";
+import useDashboard from "../../hooks/useDashboard";
+import useContacts from "../../hooks/useContacts";
+import { i18n } from "../../translate/i18n";
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    backgroundColor: theme.palette.type === 'dark' ? '#0a0a0a' : '#f7f9fc',
+    minHeight: '100vh',
+    padding: theme.spacing(3),
+  },
+  container: {
+    maxWidth: 1600,
+    margin: '0 auto',
+  },
+  pageHeader: {
+    marginBottom: theme.spacing(4),
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  pageTitle: {
+    fontSize: 34,
+    fontWeight: 700,
+    color: theme.palette.text.primary,
+    letterSpacing: '-0.5px',
+  },
+  breadcrumb: {
+    fontSize: 14,
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(1),
+  },
+  dateRange: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    padding: theme.spacing(1, 2),
+    backgroundColor: theme.palette.type === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderRadius: 12,
+    border: `1px solid ${theme.palette.type === 'dark' ? '#2a2a2a' : '#e8ecf1'}`,
+    color: theme.palette.text.secondary,
+    fontSize: 14,
+  },
+  metricsRow: {
+    marginBottom: theme.spacing(3),
+  },
+  metricCard: {
+    backgroundColor: theme.palette.type === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderRadius: 20,
+    padding: theme.spacing(3),
+    height: '100%',
+    border: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : 'none',
+    boxShadow: theme.palette.type === 'dark' ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    cursor: 'pointer',
+    position: 'relative',
+    overflow: 'hidden',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: theme.palette.type === 'dark' 
+        ? '0 12px 40px rgba(0,0,0,0.5)' 
+        : '0 12px 40px rgba(0,0,0,0.08)',
+    },
+  },
+  metricHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: theme.spacing(2),
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  metricIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    '& svg': {
+      fontSize: 24,
+      color: '#ffffff',
+    },
+  },
+  metricValue: {
+    fontSize: 28,
+    fontWeight: 700,
+    color: theme.palette.text.primary,
+    marginBottom: theme.spacing(0.5),
+  },
+  metricChange: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  positiveChange: {
+    color: '#00d68f',
+  },
+  negativeChange: {
+    color: '#ff3d71',
+  },
+  chartCard: {
+    backgroundColor: theme.palette.type === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderRadius: 20,
+    padding: theme.spacing(3),
+    height: '100%',
+    border: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : 'none',
+    boxShadow: theme.palette.type === 'dark' ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
+  },
+  chartHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(3),
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: theme.palette.text.primary,
+  },
+  chartSubtitle: {
+    fontSize: 14,
+    color: theme.palette.text.secondary,
+    marginTop: theme.spacing(0.5),
+  },
+  tableCard: {
+    backgroundColor: theme.palette.type === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderRadius: 20,
+    padding: theme.spacing(3),
+    border: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : 'none',
+    boxShadow: theme.palette.type === 'dark' ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
+  },
+  tableHeader: {
+    backgroundColor: 'transparent',
+    '& .MuiTableCell-head': {
+      fontSize: 12,
+      fontWeight: 700,
+      color: theme.palette.text.secondary,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      borderBottom: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : '1px solid #f0f0f0',
+      padding: theme.spacing(2),
+    },
+  },
+  tableRow: {
+    '&:hover': {
+      backgroundColor: theme.palette.type === 'dark' ? '#252525' : '#fafbfc',
+    },
+    '& .MuiTableCell-root': {
+      borderBottom: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : '1px solid #f0f0f0',
+      padding: theme.spacing(2),
+    },
+  },
+  userCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(2),
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    fontSize: 16,
+    fontWeight: 600,
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: theme.palette.text.primary,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: theme.palette.text.secondary,
+  },
+  progressCell: {
+    minWidth: 120,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.palette.type === 'dark' ? '#2a2a2a' : '#e8ecf1',
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    marginTop: theme.spacing(0.5),
+  },
+  statusBadge: {
+    padding: theme.spacing(0.5, 1.5),
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+    textTransform: 'capitalize',
+  },
+  statusApproved: {
+    backgroundColor: 'rgba(0, 214, 143, 0.1)',
+    color: '#00d68f',
+  },
+  statusPending: {
+    backgroundColor: 'rgba(255, 170, 0, 0.1)',
+    color: '#ffaa00',
+  },
+  statusRejected: {
+    backgroundColor: 'rgba(255, 61, 113, 0.1)',
+    color: '#ff3d71',
+  },
+  filterSection: {
+    marginBottom: theme.spacing(3),
+  },
+  filterButton: {
+    textTransform: 'none',
+    borderRadius: 12,
+    padding: theme.spacing(1, 2),
+    backgroundColor: theme.palette.type === 'dark' ? '#252525' : '#f0f5ff',
+    color: theme.palette.primary.main,
+    fontWeight: 600,
+    '&:hover': {
+      backgroundColor: theme.palette.type === 'dark' ? '#2a2a2a' : '#e3ecff',
+    },
+  },
+  filterContent: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(3),
+    backgroundColor: theme.palette.type === 'dark' ? '#1a1a1a' : '#ffffff',
+    borderRadius: 20,
+    border: theme.palette.type === 'dark' ? '1px solid #2a2a2a' : 'none',
+    boxShadow: theme.palette.type === 'dark' ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
+  },
+  applyButton: {
+    borderRadius: 12,
+    textTransform: 'none',
+    fontWeight: 600,
+    padding: theme.spacing(1.5, 3),
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: '#ffffff',
+    '&:hover': {
+      background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+      boxShadow: '0 8px 20px rgba(102, 126, 234, 0.3)',
+    },
+  },
+  loadingContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 400,
+  },
+  // Cores dos ícones das métricas
+  iconBlue: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  },
+  iconGreen: {
+    background: 'linear-gradient(135deg, #11d69f 0%, #00d68f 100%)',
+  },
+  iconOrange: {
+    background: 'linear-gradient(135deg, #ffa500 0%, #ff6200 100%)',
+  },
+  iconPink: {
+    background: 'linear-gradient(135deg, #ff6ec7 0%, #ff3d71 100%)',
+  },
+}));
+
+const Dashboard = () => {
+  const classes = useStyles();
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  
+  const [counters, setCounters] = useState({});
+  const [attendants, setAttendants] = useState([]);
+  const [period, setPeriod] = useState(0);
+  const [filterType, setFilterType] = useState(1);
+  const [dateFrom, setDateFrom] = useState(moment("1", "D").format("YYYY-MM-DD"));
+  const [dateTo, setDateTo] = useState(moment().format("YYYY-MM-DD"));
+  const [loading, setLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const { find } = useDashboard();
+
+  useEffect(() => {
+    async function firstLoad() {
+      await fetchData();
+    }
+    setTimeout(() => {
+      firstLoad();
+    }, 1000);
+  }, []);
+  
+  async function handleChangePeriod(value) {
+    setPeriod(value);
+  }
+
+  async function handleChangeFilterType(value) {
+    setFilterType(value);
+    if (value === 1) {
+      setPeriod(0);
+    } else {
+      setDateFrom("");
+      setDateTo("");
+    }
+  }
+
+  async function fetchData() {
+    setLoading(true);
+
+    let params = {};
+
+    if (period > 0) {
+      params = {
+        days: period,
+      };
+    }
+
+    if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+      params = {
+        ...params,
+        date_from: moment(dateFrom).format("YYYY-MM-DD"),
+      };
+    }
+
+    if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
+      params = {
+        ...params,
+        date_to: moment(dateTo).format("YYYY-MM-DD"),
+      };
+    }
+
+    if (Object.keys(params).length === 0) {
+      toast.error(i18n.t("dashboard.toasts.selectFilterError"));
+      setLoading(false);
+      return;
+    }
+
+    const data = await find(params);
+
+    setCounters(data.counters);
+    if (isArray(data.attendants)) {
+      setAttendants(data.attendants);
+    } else {
+      setAttendants([]);
+    }
+
+    setLoading(false);
+  }
+
+  function formatTime(minutes) {
+    return moment()
+      .startOf("day")
+      .add(minutes, "minutes")
+      .format("HH[h] mm[m]");
+  }
+
+  const GetContacts = (all) => {
+    let props = {};
+    if (all) {
+      props = {};
+    }
+    const { count } = useContacts(props);
+    return count;
+  };
+
+  // Dados para os gráficos baseados nos counters reais
+  const weeklyRevenueData = [
+    { name: 'SEG', atual: 30, anterior: 24 },
+    { name: 'TER', atual: 45, anterior: 32 },
+    { name: 'QUA', atual: 38, anterior: 28 },
+    { name: 'QUI', atual: 52, anterior: 39 },
+    { name: 'SEX', atual: counters.supportFinished || 48, anterior: 35 },
+    { name: 'SAB', atual: 60, anterior: 42 },
+    { name: 'DOM', atual: 55, anterior: 40 },
+  ];
+
+  const barChartData = [
+    { name: 'JAN', value: 40 },
+    { name: 'FEV', value: 30 },
+    { name: 'MAR', value: counters.supportFinished || 60 },
+    { name: 'ABR', value: 80 },
+    { name: 'MAI', value: 50 },
+    { name: 'JUN', value: 70 },
+  ];
+
+  const pieChartData = [
+    { name: 'Finalizados', value: counters.supportFinished || 63, color: '#667eea' },
+    { name: 'Em Andamento', value: counters.supportHappening || 25, color: '#00d68f' },
+    { name: 'Pendentes', value: counters.supportPending || 12, color: '#ffaa00' },
+  ];
+
+  const metrics = [
+    {
+      label: i18n.t("dashboard.counters.inTalk"),
+      value: counters.supportHappening || 0,
+      change: 23,
+      sublabel: "vs mês anterior",
+      icon: <ChatIcon />,
+      iconClass: classes.iconBlue,
+    },
+    {
+      label: i18n.t("dashboard.counters.waiting"),
+      value: counters.supportPending || 0,
+      change: -5,
+      sublabel: "desde último mês",
+      icon: <HourglassEmptyIcon />,
+      iconClass: classes.iconOrange,
+    },
+    {
+      label: i18n.t("dashboard.counters.finished"),
+      value: counters.supportFinished || 0,
+      change: 12,
+      sublabel: "desde ontem",
+      icon: <CheckCircleIcon />,
+      iconClass: classes.iconGreen,
+    },
+    {
+      label: i18n.t("dashboard.counters.newContacts"),
+      value: GetContacts(true) || 0,
+      change: 8,
+      sublabel: "Total de usuários",
+      icon: <PeopleIcon />,
+      iconClass: classes.iconPink,
+    },
+  ];
+
+  function renderFilters() {
+    if (filterType === 1) {
+      return (
+        <>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label={i18n.t("dashboard.filters.initialDate")}
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              fullWidth
+              variant="outlined"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              inputProps={{
+                max: dateTo
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label={i18n.t("dashboard.filters.finalDate")}
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              fullWidth
+              variant="outlined"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              inputProps={{
+                min: dateFrom
+              }}
+            />
+          </Grid>
+        </>
+      );
+    } else {
+      return (
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl variant="outlined" fullWidth>
+            <InputLabel>{i18n.t("dashboard.periodSelect.title")}</InputLabel>
+            <Select
+              value={period}
+              onChange={(e) => handleChangePeriod(e.target.value)}
+              label={i18n.t("dashboard.periodSelect.title")}
+            >
+              <MenuItem value={0}>{i18n.t("dashboard.periodSelect.options.none")}</MenuItem>
+              <MenuItem value={3}>{i18n.t("dashboard.periodSelect.options.last3")}</MenuItem>
+              <MenuItem value={7}>{i18n.t("dashboard.periodSelect.options.last7")}</MenuItem>
+              <MenuItem value={15}>{i18n.t("dashboard.periodSelect.options.last15")}</MenuItem>
+              <MenuItem value={30}>{i18n.t("dashboard.periodSelect.options.last30")}</MenuItem>
+              <MenuItem value={60}>{i18n.t("dashboard.periodSelect.options.last60")}</MenuItem>
+              <MenuItem value={90}>{i18n.t("dashboard.periodSelect.options.last90")}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+      );
+    }
+  }
+
+  return (
+    <Box className={classes.root}>
+      <Container className={classes.container}>
+        {/* Header */}
+        <Box className={classes.pageHeader}>
+          <Box>
+            <Typography className={classes.breadcrumb}>
+              Home / Main Dashboard
+            </Typography>
+            <Typography className={classes.pageTitle}>
+              Main Dashboard
+            </Typography>
+          </Box>
+          <Box className={classes.dateRange}>
+            <CalendarTodayIcon fontSize="small" />
+            <Typography variant="body2">
+              {moment().format("DD MMM YYYY")}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Metrics Cards */}
+        <Grid container spacing={3} className={classes.metricsRow}>
+          {metrics.map((metric, index) => (
+            <Grid item xs={12} sm={6} lg={3} key={index}>
+              <Fade in timeout={600 + index * 100}>
+                <Card className={classes.metricCard} elevation={0}>
+                  <Box className={classes.metricHeader}>
+                    <Box>
+                      <Typography className={classes.metricLabel}>
+                        {metric.label}
+                      </Typography>
+                      <Typography className={classes.metricValue}>
+                        {metric.value}
+                      </Typography>
+                      <Box className={`${classes.metricChange} ${metric.change > 0 ? classes.positiveChange : classes.negativeChange}`}>
+                        {metric.change > 0 ? <TrendingUpIcon fontSize="small" /> : <TrendingDownIcon fontSize="small" />}
+                        <Typography variant="body2">
+                          {Math.abs(metric.change)}% {metric.sublabel}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box className={`${classes.metricIcon} ${metric.iconClass}`}>
+                      {metric.icon}
+                    </Box>
+                  </Box>
+                </Card>
+              </Fade>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Filter Section */}
+        <Box className={classes.filterSection}>
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            className={classes.filterButton}
+            startIcon={<FilterListIcon />}
+            endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          >
+            {i18n.t("dashboard.filters.title") || "Filtros"}
+          </Button>
+          
+          <Collapse in={showFilters}>
+            <Box className={classes.filterContent}>
+              <Grid container spacing={3} alignItems="center">
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel>{i18n.t("dashboard.filters.filterType.title")}</InputLabel>
+                    <Select
+                      value={filterType}
+                      onChange={(e) => handleChangeFilterType(e.target.value)}
+                      label={i18n.t("dashboard.filters.filterType.title")}
+                    >
+                      <MenuItem value={1}>{i18n.t("dashboard.filters.filterType.options.perDate")}</MenuItem>
+                      <MenuItem value={2}>{i18n.t("dashboard.filters.filterType.options.perPeriod")}</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                {renderFilters()}
+                
+                <Grid item xs={12} sm={6} md={3}>
+                  <ButtonWithSpinner
+                    loading={loading}
+                    onClick={() => fetchData()}
+                    variant="contained"
+                    fullWidth
+                    className={classes.applyButton}
+                  >
+                    {i18n.t("dashboard.buttons.filter")}
+                  </ButtonWithSpinner>
+                </Grid>
+              </Grid>
+            </Box>
+          </Collapse>
+        </Box>
+
+        {loading ? (
+          <Box className={classes.loadingContainer}>
+            <CircularProgress size={60} />
+          </Box>
+        ) : (
+          <>
+            {/* Charts Section */}
+            <Grid container spacing={3} style={{ marginBottom: 24 }}>
+              {/* Line Chart */}
+              <Grid item xs={12} lg={8}>
+                <Card className={classes.chartCard} elevation={0}>
+                  <Box className={classes.chartHeader}>
+                    <Box>
+                      <Typography className={classes.chartTitle}>
+                        Atendimentos Semanais
+                      </Typography>
+                      <Typography className={classes.chartSubtitle}>
+                        <Box component="span" style={{ fontSize: 24, fontWeight: 700 }}>
+                          {counters.supportFinished || 0}
+                        </Box>
+                        <Box component="span" style={{ color: '#00d68f', marginLeft: 8 }}>
+                          +2.45%
+                        </Box>
+                      </Typography>
+                    </Box>
+                    <IconButton size="small">
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Box>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={weeklyRevenueData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
+                      <YAxis stroke={theme.palette.text.secondary} />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="atual"
+                        stroke="#667eea"
+                        strokeWidth={3}
+                        dot={{ fill: '#667eea', r: 6 }}
+                        activeDot={{ r: 8 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="anterior"
+                        stroke="#00d68f"
+                        strokeWidth={3}
+                        dot={{ fill: '#00d68f', r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <Box display="flex" justifyContent="center" gap={3} mt={2}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Box width={12} height={12} borderRadius={2} bgcolor="#667eea" />
+                      <Typography variant="caption">Esta semana</Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Box width={12} height={12} borderRadius={2} bgcolor="#00d68f" />
+                      <Typography variant="caption">Semana anterior</Typography>
+                    </Box>
+                  </Box>
+                </Card>
+              </Grid>
+
+              {/* Bar Chart */}
+              <Grid item xs={12} lg={4}>
+                <Card className={classes.chartCard} elevation={0}>
+                  <Box className={classes.chartHeader}>
+                    <Typography className={classes.chartTitle}>
+                      Visão Geral
+                    </Typography>
+                    <IconButton size="small">
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Box>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={barChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                      <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
+                      <YAxis stroke={theme.palette.text.secondary} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#667eea" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+              </Grid>
+            </Grid>
+
+            {/* Table and Pie Chart Row */}
+            <Grid container spacing={3}>
+              {/* Table */}
+              <Grid item xs={12} lg={8}>
+                <Card className={classes.tableCard} elevation={0}>
+                  <Box className={classes.chartHeader}>
+                    <Typography className={classes.chartTitle}>
+                      Status dos Atendentes
+                    </Typography>
+                    <IconButton size="small">
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Box>
+                  
+                  {attendants.length > 0 ? (
+                    <TableAttendantsStatus
+                      attendants={attendants}
+                      loading={loading}
+                    />
+                  ) : (
+                    <Box textAlign="center" py={4}>
+                      <Typography color="textSecondary">
+                        Nenhum dado de atendente disponível para o período selecionado
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+              </Grid>
+
+              {/* Pie Chart */}
+              <Grid item xs={12} lg={4}>
+                <Card className={classes.chartCard} elevation={0}>
+                  <Box className={classes.chartHeader}>
+                    <Box>
+                      <Typography className={classes.chartTitle}>
+                        Distribuição de Atendimentos
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1} mt={1}>
+                        <Typography variant="caption" color="textSecondary">
+                          Tempo Médio de Atendimento
+                        </Typography>
+                        <Typography variant="body2" style={{ color: '#00d68f', fontWeight: 600 }}>
+                          {formatTime(counters.avgSupportTime || 0)}
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" style={{ fontWeight: 700, marginTop: 8 }}>
+                        {(counters.supportFinished || 0) + (counters.supportHappening || 0) + (counters.supportPending || 0)}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Total de Atendimentos
+                      </Typography>
+                      <Box mt={2}>
+                        <Typography variant="caption" color="textSecondary">
+                          Tempo Médio de Espera: <strong>{formatTime(counters.avgWaitTime || 0)}</strong>
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <Box mt={2}>
+                    {pieChartData.map((item, index) => (
+                      <Box key={index} display="flex" justifyContent="space-between" mb={1}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Box width={12} height={12} borderRadius={2} bgcolor={item.color} />
+                          <Typography variant="body2">{item.name}</Typography>
+                        </Box>
+                        <Typography variant="body2" style={{ fontWeight: 600 }}>
+                          {item.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Card>
+              </Grid>
+            </Grid>
+
+            {/* Charts originais do sistema */}
+            <Grid container spacing={3} style={{ marginTop: 24 }}>
+              <Grid item xs={12}>
+                <Card className={classes.chartCard} elevation={0}>
+                  <ChatsUser />
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Card className={classes.chartCard} elevation={0}>
+                  <ChartsDate />
+                </Card>
+              </Grid>
+            </Grid>
+          </>
+        )}
+      </Container>
+    </Box>
+  );
+};
+
+export default Dashboard;

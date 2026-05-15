@@ -1,0 +1,25 @@
+/* Estilos customizados para a página de Agendamentos */
+
+/* Animações suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+  .schedule-details {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .schedule-item {
+    width: 100%;
+  }
+}

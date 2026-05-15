@@ -1,0 +1,128 @@
+import React from "react";
+import { Card } from "@material-ui/core";
+import { makeStyles } from "@material-ui/core/styles";
+
+// Ícones do Material UI v4
+import ConfirmationNumberIcon from "@material-ui/icons/ConfirmationNumber";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
+import LabelIcon from "@material-ui/icons/Label";
+import ChatIcon from "@material-ui/icons/Chat";
+import PersonIcon from "@material-ui/icons/Person";
+
+import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
+
+// Cores do tema principal do software (manter consistente com o outro componente)
+const mainThemeColor = {
+  light: '#5d8aff',
+  main: '#2563eb',
+  dark: '#1a44a8',
+  contrastText: '#ffffff'
+};
+
+const secondaryThemeColor = {
+  light: '#ff6e59',
+  main: '#ff3f20',
+  dark: '#c52100',
+  contrastText: '#ffffff'
+};
+
+// Estilos atualizados com design moderno
+const useStyles = makeStyles(theme => ({
+  ticketHeader: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    flex: "none",
+    borderBottom: "none",
+    padding: "8px 12px",
+    borderRadius: "0",
+    boxShadow: "none",
+    gap: "8px",
+    [theme.breakpoints.down("sm")]: {
+      flexWrap: "wrap",
+      padding: "6px 10px"
+    }
+  },
+  iconWrapper: {
+    display: "flex",
+    alignItems: "center",
+    color: mainThemeColor.main,
+    fontSize: "0.85rem",
+    gap: "4px",
+    padding: "4px 10px",
+    borderRadius: "16px",
+    margin: "0 2px",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "rgba(37, 99, 235, 0.08)"
+    }
+  },
+  iconStyle: {
+    fontSize: 18,
+    color: mainThemeColor.main
+  },
+  textStyle: {
+    marginLeft: "4px",
+    fontSize: "0.85rem",
+    fontWeight: 500,
+    color: theme.palette.text.primary
+  }
+}));
+
+// Componente de ícone reutilizável com design moderno
+const IconItem = ({ icon: Icon, children, className }) => {
+  const classes = useStyles();
+  return (
+    <div className={`${classes.iconWrapper} ${className || ""}`}>
+      <Icon className={classes.iconStyle} />
+      <span className={classes.textStyle}>{children}</span>
+    </div>
+  );
+};
+
+const TicketHeader = ({ loading, children, icons }) => {
+  const classes = useStyles();
+  
+  // Se o parâmetro icons for fornecido, renderizamos nossos novos ícones
+  // Caso contrário, mantemos o comportamento original com children
+  const renderContent = () => {
+    if (icons) {
+      return (
+        <>
+          <IconItem icon={ConfirmationNumberIcon}>
+            {icons.ticketId || "#12345"}
+          </IconItem>
+          <IconItem icon={AccessTimeIcon}>
+            {icons.timeInfo || "Hoje às 14:30"}
+          </IconItem>
+          <IconItem icon={LabelIcon}>
+            {icons.status || "Aberto"}
+          </IconItem>
+          <IconItem icon={PersonIcon}>
+            {icons.assignee || "Não atribuído"}
+          </IconItem>
+          <IconItem icon={ChatIcon}>
+            {icons.messages || "3 mensagens"}
+          </IconItem>
+          {icons.additionalContent}
+        </>
+      );
+    }
+    
+    return children;
+  };
+
+  return (
+    <>
+      {loading ? (
+        <TicketHeaderSkeleton />
+      ) : (
+        <Card square elevation={0} className={classes.ticketHeader}>
+          {renderContent()}
+        </Card>
+      )}
+    </>
+  );
+};
+
+export default TicketHeader;

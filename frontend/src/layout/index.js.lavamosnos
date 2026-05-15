@@ -1,0 +1,229 @@
+import React, { useState, useContext, useEffect } from "react";
+import clsx from "clsx";
+import {
+  makeStyles,
+  Drawer,
+  Typography,
+  IconButton,
+  List,
+  Box,
+  Tooltip,
+} from "@material-ui/core";
+
+// Ícones modernos para menu
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import MenuIcon from "@material-ui/icons/Menu";
+
+import MainListItems from "./MainListItems";
+import UserModal from "../components/UserModal";
+import { AuthContext } from "../context/Auth/AuthContext";
+import BackdropLoading from "../components/BackdropLoading";
+import logo from "../assets/logo.png";
+
+// Diminuição da largura do menu quando expandido
+const drawerWidth = 230; // Reduzido de 270 para 230
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    height: "100vh",
+    backgroundColor: theme.palette.fancyBackground || "#f5f5f5",
+  },
+  drawerPaper: {
+    position: "fixed",
+    height: "100%",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
+    borderRight: theme.mode === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)',
+    overflowX: "hidden",
+    zIndex: 1200,
+  },
+  drawerPaperClose: {
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+    [theme.breakpoints.up("sm")]: {
+      width: theme.spacing(9),
+    },
+  },
+  toolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: "0 16px",
+    minHeight: "64px",
+    [theme.breakpoints.down("sm")]: {
+      minHeight: "56px",
+    }
+  },
+  content: {
+    flexGrow: 1,
+    height: "100vh",
+    overflow: "auto",
+    marginLeft: theme.spacing(7),
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    [theme.breakpoints.up("sm")]: {
+      marginLeft: theme.spacing(9),
+    },
+  },
+  contentShift: {
+    marginLeft: drawerWidth,
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  // Reativamos o botão que sobrepõe o menu
+  menuButton: {
+    position: "fixed",
+    top: theme.spacing(8),
+    left: ({ drawerOpen }) => drawerOpen 
+      ? drawerWidth - 20
+      : theme.spacing(7) - 20,
+    zIndex: 1300,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    width: 40,
+    height: 40,
+    padding: 0,
+    transition: theme.transitions.create(['left'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    borderRadius: "50%",
+    color: theme.palette.primary.main, // Cor primária adicionada ao ícone
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  listWrapper: {
+    height: "calc(100% - 64px)",
+    overflowY: "auto",
+    overflowX: "hidden",
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+      borderRadius: "3px",
+    },
+    "&::-webkit-scrollbar-thumb:hover": {
+      background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+    },
+  },
+  versionInfo: {
+    fontSize: 12,
+    padding: theme.spacing(1),
+    textAlign: "right",
+    fontWeight: 500,
+    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
+  }
+}));
+
+const LoggedInLayout = ({ children }) => {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, handleLogout, loading } = useContext(AuthContext);
+  
+  // Passamos o estado do drawer para os estilos
+  const classes = useStyles({ drawerOpen });
+  
+  // Toggle drawer function
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  // Close drawer on smaller screens
+  const drawerClose = () => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (document.body.offsetWidth > 1200) {
+      setDrawerOpen(true);
+    }
+  }, []);
+
+  if (loading) {
+    return <BackdropLoading />;
+  }
+
+  return (
+    <div className={classes.root}>
+      <Drawer
+        variant="permanent"
+        classes={{
+          paper: clsx(
+            classes.drawerPaper,
+            !drawerOpen && classes.drawerPaperClose
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          <img 
+            src={logo} 
+            alt="logo" 
+            style={{ 
+              height: 40, 
+              maxWidth: drawerOpen ? 140 : 30,
+              objectFit: "contain",
+              transition: "max-width 0.3s" 
+            }} 
+          />
+        </div>
+        
+        <div className={classes.listWrapper}>
+          <List>
+            <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+          </List>
+          
+          {drawerOpen && (
+            <Typography className={classes.versionInfo}>
+              v8.0.1
+            </Typography>
+          )}
+        </div>
+      </Drawer>
+      
+      {/* Botão que sobrepõe o menu */}
+      <Tooltip title={drawerOpen ? "Recolher menu" : "Expandir menu"}>
+        <IconButton
+          className={classes.menuButton}
+          onClick={handleDrawerToggle}
+        >
+          {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+        </IconButton>
+      </Tooltip>
+
+      <UserModal
+        open={false}
+        onClose={() => {}}
+        userId={user?.id}
+      />
+      
+      <main className={clsx(classes.content, drawerOpen && classes.contentShift)}>
+        <Box>
+          {children}
+        </Box>
+      </main>
+    </div>
+  );
+};
+
+export default LoggedInLayout;

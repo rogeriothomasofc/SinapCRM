@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: sinapcrm-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: sinapcrm
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sinapcrm-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: sinapcrm-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sinapcrm-net
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    container_name: sinapcrm-backend
+    ports:
+      - "8080:3000"
+    env_file:
+      - backend/.env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/src:/app/src
+      - backend_public:/app/public
+      - backend_sessions:/app/sessions
+    networks:
+      - sinapcrm-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.dev
+      args:
+        REACT_APP_BACKEND_URL: http://localhost:8080
+        REACT_APP_HOURS_CLOSE_TICKETS_AUTO: "24"
+        STACK_NAME: sinapcrm-dev
+        REACT_APP_COLOR: "#682EE3"
+        REACT_APP_TAB_NAME: "SinapCRM"
+    container_name: sinapcrm-frontend
+    ports:
+      - "3000:3001"
+    depends_on:
+      - backend
+    networks:
+      - sinapcrm-net
+    restart: unless-stopped
+
+networks:
+  sinapcrm-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_public:
+  backend_sessions:

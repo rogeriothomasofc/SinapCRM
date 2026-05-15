@@ -1,0 +1,151 @@
+import React, { useState, useContext, useEffect } from "react";
+import clsx from "clsx";
+import {
+  makeStyles,
+  Drawer,
+  Typography,
+  Divider,
+  IconButton,
+  List,
+  Tooltip,
+} from "@material-ui/core";
+
+// Ícones modernos para menu
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import MenuIcon from "@material-ui/icons/Menu";
+import MenuOpenIcon from "@material-ui/icons/MenuOpen";
+
+import MainListItems from "./MainListItems";
+import UserModal from "../components/UserModal";
+import { AuthContext } from "../context/Auth/AuthContext";
+import BackdropLoading from "../components/BackdropLoading";
+import logo from "../assets/logo.png";
+
+const drawerWidth = 220;
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    height: "100vh",
+    backgroundColor: theme.palette.fancyBackground,
+  },
+  drawerPaper: {
+    position: "relative",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  drawerPaperClose: {
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+  },
+  toolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 16px",
+    minHeight: "64px",
+  },
+  content: {
+    flex: 1,
+    overflow: "auto",
+  },
+  menuButton: {
+    position: "fixed",
+    top: theme.spacing(1),
+    left: drawerWidth + theme.spacing(2),
+    zIndex: 1200,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    transition: theme.transitions.create(['left'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  menuButtonClosed: {
+    left: theme.spacing(9),
+  },
+}));
+
+const LoggedInLayout = ({ children }) => {
+  const classes = useStyles();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, handleLogout, loading } = useContext(AuthContext);
+  
+  // Toggle drawer function
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  useEffect(() => {
+    if (document.body.offsetWidth > 1200) {
+      setDrawerOpen(true);
+    }
+  }, []);
+
+  if (loading) {
+    return <BackdropLoading />;
+  }
+
+  return (
+    <div className={classes.root}>
+      <Drawer
+        variant="permanent"
+        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        classes={{
+          paper: clsx(
+            classes.drawerPaper,
+            !drawerOpen && classes.drawerPaperClose
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          <img src={logo} alt="logo" style={{ height: 40 }} />
+          <IconButton onClick={handleDrawerToggle}>
+            <ChevronLeftIcon />
+          </IconButton>
+        </div>
+        <Divider />
+        <List>
+          <MainListItems drawerClose={() => setDrawerOpen(false)} collapsed={!drawerOpen} />
+        </List>
+      </Drawer>
+
+      {/* Botão flutuante para toggle do menu */}
+      <Tooltip title={drawerOpen ? "Recolher menu" : "Expandir menu"}>
+        <IconButton
+          className={clsx(
+            classes.menuButton,
+            !drawerOpen && classes.menuButtonClosed
+          )}
+          onClick={handleDrawerToggle}
+          size="small"
+        >
+          {drawerOpen ? <MenuOpenIcon /> : <MenuIcon />}
+        </IconButton>
+      </Tooltip>
+
+      <UserModal
+        open={false}
+        onClose={() => {}}
+        userId={user?.id}
+      />
+      <main className={classes.content}>
+        {children}
+      </main>
+    </div>
+  );
+};
+
+export default LoggedInLayout;

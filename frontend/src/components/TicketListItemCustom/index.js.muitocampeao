@@ -1,0 +1,586 @@
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { useHistory, useParams } from "react-router-dom";
+import { parseISO, format, isSameDay } from "date-fns";
+import clsx from "clsx";
+
+// Material UI
+import { makeStyles } from "@material-ui/core/styles";
+import { 
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Typography,
+  Badge,
+  Tooltip,
+  IconButton,
+  Divider,
+  Box,
+  CircularProgress
+} from "@material-ui/core";
+import { green, grey, red, blue, orange, purple } from "@material-ui/core/colors";
+
+// Icons
+import DoneIcon from '@material-ui/icons/Done';
+import CloseIcon from '@material-ui/icons/Close';
+import ReplayIcon from '@material-ui/icons/Replay';
+import VisibilityIcon from "@material-ui/icons/Visibility";
+import AndroidIcon from "@material-ui/icons/Android";
+
+// Contexto e API
+import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { TicketsContext } from "../../context/Tickets/TicketsContext";
+import toastError from "../../errors/toastError";
+import { v4 as uuidv4 } from "uuid";
+
+// Componentes
+import TicketMessagesDialog from "../TicketMessagesDialog";
+import MarkdownWrapper from "../MarkdownWrapper";
+import ContactTag from "../ContactTag";
+
+const useStyles = makeStyles((theme) => ({
+  ticket: {
+    position: "relative",
+    padding: theme.spacing(1.5, 1.5, 1.5, 1.5), // Adjusted padding to remove left space reserved for the bar
+    transition: "background-color 0.2s",
+    "&:hover": {
+      backgroundColor: "rgba(0, 0, 0, 0.05)",
+    },
+  },
+
+  selectedTicket: {
+    backgroundColor: "rgba(0, 0, 0, 0.06)",
+  },
+
+  // Status colors still used for other visual indicators like badge
+  pendingStatus: {
+    color: orange[500],
+  },
+  
+  closedStatus: {
+    color: grey[500],
+  },
+  
+  openStatus: {
+    color: green[500],
+  },
+
+  ticketInfo: {
+    width: '100%',
+  },
+
+  contactName: {
+    fontWeight: 700, // Increased from 500 to 700 for bold text
+    fontSize: "1rem", // Increased from 0.9rem for better visibility
+    color: "#333",
+    display: "flex",
+    alignItems: "center",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "calc(100% - 50px)",
+  },
+
+  lastMessage: {
+    fontSize: "0.8rem",
+    color: grey[600],
+    height: 20,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  timestamp: {
+    position: "absolute",
+    top: 12, // Adjusted to align with the larger contact name
+    right: 12,
+    fontSize: "0.75rem", // Slightly larger for better readability
+    color: grey[500],
+  },
+
+  badge: {
+    position: "absolute",
+    top: "50%",
+    left: 20,
+    transform: "translateY(-50%)",
+    backgroundColor: theme.palette.primary.main,
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "0.7rem",
+    height: 20, // Increased from 18 for better visibility
+    minWidth: 20, // Increased from 18 for better visibility
+    padding: "0 4px", // Increased from 0 3px for better spacing
+    zIndex: 1,
+  },
+
+  tagsContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 6, // Increased from 4 for better spacing
+    marginTop: 4, // Increased from 2 for better visibility
+  },
+
+  tag: {
+    height: 18, // Increased from 16 for better visibility
+    fontSize: "0.7rem", // Increased from 0.65rem for better readability
+    borderRadius: 9, // Half of height for rounded appearance
+    padding: "0 8px", // Increased from 0 6px for better spacing
+    fontWeight: 500,
+    lineHeight: 1.5,
+    whiteSpace: "nowrap",
+    display: "flex",
+    alignItems: "center",
+  },
+
+  whatsappTag: {
+    backgroundColor: "rgba(37, 211, 102, 0.15)", // Increased opacity for better visibility
+    color: "#128C7E",
+  },
+
+  userTag: {
+    backgroundColor: "rgba(156, 39, 176, 0.15)", // Changed to purple color
+    color: purple[700],
+  },
+
+  queueTag: {
+    backgroundColor: "rgba(0, 0, 0, 0.08)",
+    color: "#555",
+  },
+
+  actions: {
+    position: "absolute",
+    right: 12, // Increased from 8 for better spacing
+    bottom: 12, // Increased from 8 for better spacing
+    display: "flex",
+    gap: 8, // Increased from 2 for better spacing between buttons
+  },
+
+  actionButton: {
+    padding: 6, // Increased from 4 for larger touch target
+    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)", // Enhanced shadow
+    borderRadius: 20, // More rounded buttons
+  },
+
+  acceptButton: {
+    color: "white",
+    backgroundColor: green[500],
+    "&:hover": {
+      backgroundColor: green[600],
+    },
+  },
+
+  closeButton: {
+    color: "white",
+    backgroundColor: red[500],
+    "&:hover": {
+      backgroundColor: red[600],
+    },
+  },
+
+  reopenButton: {
+    color: "white",
+    backgroundColor: blue[500],
+    "&:hover": {
+      backgroundColor: blue[600],
+    },
+  },
+
+  icon: {
+    fontSize: "1.1rem", // Increased from 1rem for better visibility
+  },
+
+  listItemAvatar: {
+    minWidth: 56, // Increased from 40 for larger avatar
+  },
+
+  avatar: {
+    width: 48, // Increased from 32 for larger avatar
+    height: 48, // Increased from 32 for larger avatar
+    border: `2px solid ${grey[200]}`, // Added border for better definition
+  },
+
+  loading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    zIndex: 10,
+  },
+  
+  androidIcon: {
+    fontSize: 14, // Increased from 12 for better visibility
+    color: grey[600],
+    marginLeft: 6, // Increased from 4 for better spacing
+  },
+  
+  visibilityIcon: {
+    fontSize: 18, // Increased for better visibility
+    color: blue[700], // Darker blue for better contrast
+    marginLeft: 6,
+    cursor: "pointer",
+    opacity: 0.8, // Slightly dimmed until hover
+    transition: "all 0.2s ease",
+    "&:hover": {
+      opacity: 1,
+      transform: "scale(1.1)",
+    },
+  },
+
+  statusIndicator: {
+    display: "inline-block",
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    marginRight: 6,
+  },
+}));
+
+const TicketListItemCompact = ({ ticket }) => {
+  const classes = useStyles();
+  const history = useHistory();
+  const [loading, setLoading] = useState(false);
+  const [ticketUser, setTicketUser] = useState(null);
+  const [ticketQueueName, setTicketQueueName] = useState(null);
+  const [whatsAppName, setWhatsAppName] = useState(null);
+  const [tag, setTag] = useState([]);
+
+  const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
+  const { ticketId } = useParams();
+  const isMounted = useRef(true);
+  const { setCurrentTicket } = useContext(TicketsContext);
+  const { user } = useContext(AuthContext);
+  const { profile } = user;
+
+  useEffect(() => {
+    if (ticket.userId && ticket.user) {
+      setTicketUser(ticket.user?.name);
+    }
+    
+    if (ticket.queue?.name) {
+      setTicketQueueName(ticket.queue.name);
+    }
+
+    if (ticket.whatsappId && ticket.whatsapp) {
+      setWhatsAppName(ticket.whatsapp.name);
+    }
+
+    setTag(ticket?.tags);
+
+    return () => {
+      isMounted.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCloseTicket = async (id) => {
+    setTag(ticket?.tags);
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "closed",
+        userId: user?.id,
+        queueId: ticket?.queue?.id,
+        useIntegration: false,
+        promptId: null,
+        integrationId: null
+      });
+    } catch (err) {
+      setLoading(false);
+      toastError(err);
+    }
+    if (isMounted.current) {
+      setLoading(false);
+    }
+    history.push(`/tickets/`);
+  };
+
+  const handleReopenTicket = async (id) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "open",
+        userId: user?.id,
+        queueId: ticket?.queue?.id
+      });
+    } catch (err) {
+      setLoading(false);
+      toastError(err);
+    }
+    if (isMounted.current) {
+      setLoading(false);
+    }
+    history.push(`/tickets/${ticket.uuid}`);
+  };
+
+  const handleAcepptTicket = async (id) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "open",
+        userId: user?.id,
+      });
+      
+      let settingIndex;
+
+      try {
+        const { data } = await api.get("/settings/");
+        settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
+      } catch (err) {
+        toastError(err);
+      }
+      
+      if (settingIndex && settingIndex[0]?.value === "enabled" && !ticket.isGroup) {
+        handleSendMessage(ticket.id);
+      }
+
+    } catch (err) {
+      setLoading(false);
+      toastError(err);
+    }
+    if (isMounted.current) {
+      setLoading(false);
+    }
+
+    history.push(`/tickets/${ticket.uuid}`);
+  };
+  
+  const handleSendMessage = async (id) => {
+    const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
+    const message = {
+      read: 1,
+      fromMe: true,
+      mediaUrl: "",
+      body: `*Mensagem Automática:*\n${msg.trim()}`,
+    };
+    try {
+      await api.post(`/messages/${id}`, message);
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const handleSelectTicket = (ticket) => {
+    const code = uuidv4();
+    const { id, uuid } = ticket;
+    setCurrentTicket({ id, uuid, code });
+  };
+  
+  // Toque no ticket
+  const handleTicketClick = () => {
+    if (ticket.status === "pending") return;
+    handleSelectTicket(ticket);
+    history.push(`/tickets/${ticket.uuid}`);
+  };
+  
+  const getStatusColor = () => {
+    if (ticket.status === "open") return green[500];
+    if (ticket.status === "pending") return orange[500];
+    if (ticket.status === "closed") return grey[500];
+    return grey[500];
+  };
+
+  return (
+    <>
+      <TicketMessagesDialog
+        open={openTicketMessageDialog}
+        handleClose={() => setOpenTicketMessageDialog(false)}
+        ticketId={ticket.id}
+      />
+      
+      <ListItem
+        button
+        onClick={handleTicketClick}
+        selected={ticketId && +ticketId === ticket.id}
+        className={clsx(
+          classes.ticket,
+          { [classes.selectedTicket]: ticketId && +ticketId === ticket.id }
+        )}
+        disableGutters
+      >
+        {/* Loading indicator */}
+        {loading && (
+          <div className={classes.loading}>
+            <CircularProgress size={24} />
+          </div>
+        )}
+        
+        {/* Unread badge */}
+        {ticket.unreadMessages > 0 && (
+          <Badge
+            badgeContent={ticket.unreadMessages}
+            className={classes.badge}
+            max={99}
+          />
+        )}
+        
+        <ListItemAvatar className={classes.listItemAvatar}>
+          <Avatar
+            src={ticket?.contact?.profilePicUrl}
+            className={classes.avatar}
+          >
+            {!ticket?.contact?.profilePicUrl && ticket?.contact?.name?.substr(0, 1).toUpperCase()}
+          </Avatar>
+        </ListItemAvatar>
+        
+        <ListItemText
+          disableTypography
+          primary={
+            <div>
+              <Typography className={classes.contactName}>
+                {ticket.contact.name}
+                {ticket.chatbot && (
+                  <AndroidIcon className={classes.androidIcon} />
+                )}
+                {profile === "admin" && (
+                  <VisibilityIcon
+                    className={classes.visibilityIcon}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenTicketMessageDialog(true);
+                    }}
+                  />
+                )}
+              </Typography>
+              <Typography className={classes.timestamp}>
+                {isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
+                  format(parseISO(ticket.updatedAt), "HH:mm")
+                ) : (
+                  format(parseISO(ticket.updatedAt), "dd/MM")
+                )}
+              </Typography>
+            </div>
+          }
+          secondary={
+            <div className={classes.ticketInfo}>
+              <Typography className={classes.lastMessage}>
+                {ticket.lastMessage.includes('data:image/png;base64') ? (
+                  "Localização"
+                ) : (
+                  ticket.lastMessage
+                )}
+              </Typography>
+              
+              <div className={classes.tagsContainer}>
+                {whatsAppName && (
+                  <Typography component="span" className={clsx(classes.tag, classes.whatsappTag)}>
+                    {whatsAppName}
+                  </Typography>
+                )}
+                
+                {ticketUser && (
+                  <Typography component="span" className={clsx(classes.tag, classes.userTag)}>
+                    {ticketUser}
+                  </Typography>
+                )}
+                
+                {ticketQueueName && (
+                  <Typography 
+                    component="span" 
+                    className={clsx(classes.tag, classes.queueTag)}
+                    style={ticket.queue?.color ? { 
+                      backgroundColor: `${ticket.queue.color}20`,
+                      color: ticket.queue.color 
+                    } : {}}
+                  >
+                    {ticketQueueName}
+                  </Typography>
+                )}
+                
+                {tag?.slice(0, 2).map((tagItem) => (
+                  <Typography 
+                    key={`ticket-tag-${ticket.id}-${tagItem.id}`}
+                    component="span" 
+                    className={classes.tag}
+                    style={{ 
+                      backgroundColor: tagItem.color ? `${tagItem.color}20` : 'rgba(0, 0, 0, 0.08)',
+                      color: tagItem.color || '#555'
+                    }}
+                  >
+                    {tagItem.name}
+                  </Typography>
+                ))}
+                
+                {tag?.length > 2 && (
+                  <Typography 
+                    component="span" 
+                    className={classes.tag}
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.08)', color: '#555' }}
+                  >
+                    +{tag.length - 2}
+                  </Typography>
+                )}
+              </div>
+            </div>
+          }
+        />
+        
+        {/* Action buttons */}
+        <div className={classes.actions}>
+          {ticket.status === "pending" && (
+            <Tooltip title={i18n.t("ticketsList.buttons.accept")}>
+              <IconButton
+                size="small"
+                className={clsx(classes.actionButton, classes.acceptButton)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAcepptTicket(ticket.id);
+                }}
+              >
+                <DoneIcon className={classes.icon} />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {ticket.status !== "closed" && (
+            <Tooltip title={i18n.t("ticketsList.buttons.closed")}>
+              <IconButton
+                size="small"
+                className={clsx(classes.actionButton, classes.closeButton)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCloseTicket(ticket.id);
+                }}
+              >
+                <CloseIcon className={classes.icon} />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {ticket.status === "closed" && (
+            <Tooltip title={i18n.t("ticketsList.buttons.reopen")}>
+              <IconButton
+                size="small"
+                className={clsx(classes.actionButton, classes.reopenButton)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReopenTicket(ticket.id);
+                }}
+              >
+                <ReplayIcon className={classes.icon} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </div>
+      </ListItem>
+      <Divider 
+        variant="fullWidth" 
+        component="li" 
+        style={{ 
+          margin: 0, 
+          width: '100%',
+          height: '1px',
+          backgroundColor: 'rgba(0, 0, 0, 0.12)'
+        }} 
+      />
+    </>
+  );
+};
+
+export default TicketListItemCompact;

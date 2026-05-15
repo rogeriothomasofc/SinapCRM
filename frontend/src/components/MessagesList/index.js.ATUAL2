@@ -1,0 +1,1108 @@
+import React, { useState, useEffect, useReducer, useRef, useContext } from "react";
+
+import { isSameDay, parseISO, format } from "date-fns";
+import clsx from "clsx";
+
+import { green } from "@material-ui/core/colors";
+import {
+  Button,
+  CircularProgress,
+  Divider,
+  IconButton,
+  makeStyles,
+  Fade,
+  Zoom,
+} from "@material-ui/core";
+
+import {
+  AccessTime,
+  Block,
+  Done,
+  DoneAll,
+  ExpandMore,
+  GetApp,
+  PhoneMissed,
+} from "@material-ui/icons";
+
+import MarkdownWrapper from "../MarkdownWrapper";
+import ModalImageCors from "../ModalImageCors";
+import MessageOptionsMenu from "../MessageOptionsMenu";
+import LocationPreview from "../LocationPreview";
+
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
+import { SocketContext } from "../../context/Socket/SocketContext";
+import { i18n } from "../../translate/i18n";
+
+// Importar as imagens de fundo
+import waBackgroundLight from "../../assets/wa-background.png";
+import waBackgroundDark from "../../assets/wa-background-dark.png";
+
+// Cor principal da aplicação
+const primaryColor = "#6B63FF"; // Roxo moderno - ajuste para sua cor principal
+const primaryColorLight = "#8B85FF";
+const primaryColorDark = "#4B43DF";
+
+const useStyles = makeStyles((theme) => ({
+  messagesListWrapper: {
+    overflow: "hidden",
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+    width: "100%",
+    minWidth: 300,
+    minHeight: 200,
+    // Estilos globais para links dentro de mensagens
+    "& .MuiTypography-root a": {
+      color: "inherit !important",
+    },
+    // Para qualquer componente que renderize links
+    "& [class*='markdown'] a, & [class*='Markdown'] a": {
+      color: "inherit !important",
+    },
+  },
+
+  messagesList: {
+    backgroundColor: theme.mode === 'light' ? "#F5F5F5" : "#303030",
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+    padding: "24px 16px",
+    overflowY: "auto",
+    overflowX: "hidden",
+    transition: "background-color 0.3s ease",
+    // Adicionar imagem de fundo
+    backgroundImage: theme.mode === 'light' 
+      ? `url(${waBackgroundLight})` 
+      : `url(${waBackgroundDark})`,
+    backgroundAttachment: "fixed",
+    backgroundPosition: "center",
+    backgroundRepeat: "repeat",
+    backgroundSize: "auto",
+    ...theme.scrollbarStyles,
+    "&::-webkit-scrollbar": {
+      width: "8px",
+    },
+    "&::-webkit-scrollbar-track": {
+      backgroundColor: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: theme.mode === 'light' ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)",
+      borderRadius: "4px",
+      "&:hover": {
+        backgroundColor: theme.mode === 'light' ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)",
+      },
+    },
+  },
+
+  circleLoading: {
+    color: primaryColor,
+    position: "absolute",
+    opacity: "70%",
+    top: 0,
+    left: "50%",
+    marginTop: 12,
+    transform: "translateX(-50%)",
+  },
+
+  messageLeft: {
+    marginRight: "auto",
+    marginLeft: 0,
+    minWidth: 100,
+    maxWidth: "100%",
+    height: "auto",
+    display: "block",
+    position: "relative",
+    transition: "all 0.3s ease",
+    whiteSpace: "pre-wrap",
+    backgroundColor: theme.mode === 'light' ? "#ffffff" : "#ffffff",
+    color: theme.mode === 'light' ? "#303030" : "#303030",
+    alignSelf: "flex-start",
+    borderRadius: "18px",
+    borderTopLeftRadius: "4px",
+    padding: "8px 12px",
+    boxShadow: theme.mode === 'light' 
+      ? "0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)" 
+      : "0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.15)",
+    animation: "$slideInLeft 0.3s ease-out",
+    // Força todos os links a usar a cor principal
+    "& a": {
+      color: primaryColor + " !important",
+      textDecoration: "underline",
+      "&:hover": {
+        textDecoration: "none",
+        opacity: 0.8,
+      },
+    },
+    "& p a, & span a, & div a": {
+      color: primaryColor + " !important",
+    },
+    // Estilos específicos para MarkdownWrapper
+    "& [class*='MarkdownWrapper'] a": {
+      color: primaryColor + " !important",
+    },
+    // Regra genérica para garantir que TODOS os links usem a cor principal
+    "& *": {
+      "& a": {
+        color: primaryColor + " !important",
+      },
+    },
+  },
+
+  "@keyframes slideInLeft": {
+    from: {
+      opacity: 0,
+      transform: "translateX(-20px)",
+    },
+    to: {
+      opacity: 1,
+      transform: "translateX(0)",
+    },
+  },
+
+  quotedContainerLeft: {
+    margin: "-4px -8px 8px -8px",
+    overflow: "hidden",
+    backgroundColor: theme.mode === 'light' ? "#f5f5f5" : "#f0f0f0",
+    borderRadius: "12px",
+    display: "flex",
+    position: "relative",
+    transition: "all 0.2s ease",
+  },
+
+  quotedMsg: {
+    padding: "8px 12px",
+    maxWidth: 300,
+    height: "auto",
+    display: "block",
+    whiteSpace: "pre-wrap",
+    overflow: "hidden",
+    fontSize: "0.875rem",
+    opacity: 0.8,
+    "& a": {
+      color: "inherit",
+      fontWeight: 500,
+      textDecoration: "underline",
+    },
+  },
+
+  quotedSideColorLeft: {
+    flex: "none",
+    width: "4px",
+    backgroundColor: primaryColor,
+    borderRadius: "4px 0 0 4px",
+  },
+
+  messageRight: {
+    marginLeft: "auto",
+    marginRight: 0,
+    minWidth: 100,
+    maxWidth: "100%",
+    height: "auto",
+    display: "block",
+    position: "relative",
+    transition: "all 0.3s ease",
+    whiteSpace: "pre-wrap",
+    backgroundColor: primaryColor,
+    color: "#ffffff",
+    alignSelf: "flex-end",
+    borderRadius: "18px",
+    borderTopRightRadius: "4px",
+    padding: "8px 12px",
+    boxShadow: theme.mode === 'light'
+      ? "0 1px 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)"
+      : "0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3)",
+    animation: "$slideInRight 0.3s ease-out",
+    // Força todos os links a serem brancos
+    "& a": {
+      color: "#ffffff !important",
+      textDecoration: "underline",
+      "&:hover": {
+        textDecoration: "none",
+        opacity: 0.9,
+      },
+    },
+    "& p a, & span a, & div a": {
+      color: "#ffffff !important",
+    },
+    // Estilos específicos para MarkdownWrapper
+    "& [class*='MarkdownWrapper'] a": {
+      color: "#ffffff !important",
+    },
+    // Regra genérica para garantir que TODOS os links sejam brancos
+    "& *": {
+      "& a": {
+        color: "#ffffff !important",
+      },
+    },
+  },
+
+  "@keyframes slideInRight": {
+    from: {
+      opacity: 0,
+      transform: "translateX(20px)",
+    },
+    to: {
+      opacity: 1,
+      transform: "translateX(0)",
+    },
+  },
+
+  messageWrapper: {
+    position: "relative",
+    marginBottom: 8,
+    maxWidth: "75%",
+    "&:hover #messageActionsButton": {
+      opacity: 1,
+      visibility: "visible",
+    },
+  },
+
+  messageWrapperLeft: {
+    marginRight: "auto",
+    // Força todos os links dentro de mensagens recebidas a usar a cor principal
+    "& a": {
+      color: primaryColor + " !important",
+    },
+    "& *": {
+      "& a": {
+        color: primaryColor + " !important",
+      },
+    },
+  },
+
+  messageWrapperRight: {
+    marginLeft: "auto",
+    // Força todos os links dentro de mensagens enviadas a serem brancos
+    "& a": {
+      color: "#ffffff !important",
+    },
+    "& *": {
+      "& a": {
+        color: "#ffffff !important",
+      },
+    },
+  },
+
+  quotedContainerRight: {
+    margin: "-4px -8px 8px -8px",
+    overflowY: "hidden",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: "12px",
+    display: "flex",
+    position: "relative",
+    backdropFilter: "blur(10px)",
+  },
+
+  quotedMsgRight: {
+    padding: "8px 12px",
+    maxWidth: 300,
+    height: "auto",
+    whiteSpace: "pre-wrap",
+    fontSize: "0.875rem",
+    opacity: 0.9,
+    "& a": {
+      color: "#ffffff",
+      fontWeight: 500,
+      textDecoration: "underline",
+    },
+  },
+
+  quotedSideColorRight: {
+    flex: "none",
+    width: "4px",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: "4px 0 0 4px",
+  },
+
+  messageActionsButton: {
+    opacity: 0,
+    visibility: "hidden",
+    position: "absolute",
+    top: "-8px",
+    right: "-8px",
+    color: theme.mode === 'light' ? "#666" : "#303030",
+    zIndex: 10,
+    backgroundColor: theme.mode === 'light' ? "#ffffff" : "#2C2C2C",
+    padding: "6px",
+    transition: "all 0.2s ease",
+    boxShadow: theme.mode === 'light' 
+      ? "0 2px 4px rgba(0,0,0,0.1)" 
+      : "0 2px 6px rgba(0,0,0,0.3)",
+    "&:hover": { 
+      backgroundColor: theme.mode === 'light' ? "#f5f5f5" : "#3a3a3a",
+      color: primaryColor,
+      transform: "scale(1.1)",
+    },
+  },
+
+  messageContactName: {
+    display: "flex",
+    color: primaryColor,
+    fontWeight: 600,
+    fontSize: "0.875rem",
+    marginBottom: "4px",
+  },
+
+  textContentItem: {
+    overflowWrap: "break-word",
+    padding: "4px 60px 4px 4px",
+    lineHeight: 1.5,
+    "& a": {
+      color: "inherit !important",
+      fontWeight: 500,
+    },
+    "& p a, & span a, & div a": {
+      color: "inherit !important",
+    },
+    // Para garantir que MarkdownWrapper renderize links corretamente
+    "& > div a": {
+      color: "inherit !important",
+      fontWeight: 500,
+      textDecoration: "underline",
+      "&:hover": {
+        textDecoration: "none",
+      },
+    },
+  },
+  
+  textContentItemEdited: {
+    overflowWrap: "break-word",
+    padding: "4px 100px 4px 4px",
+    lineHeight: 1.5,
+    "& a": {
+      color: "inherit !important",
+      fontWeight: 500,
+    },
+    "& p a, & span a, & div a": {
+      color: "inherit !important",
+    },
+    // Para garantir que MarkdownWrapper renderize links corretamente
+    "& > div a": {
+      color: "inherit !important",
+      fontWeight: 500,
+      textDecoration: "underline",
+      "&:hover": {
+        textDecoration: "none",
+      },
+    },
+  },
+
+  textContentItemDeleted: {
+    fontStyle: "italic",
+    color: theme.mode === 'light' ? "rgba(0, 0, 0, 0.45)" : "rgba(0, 0, 0, 0.45)",
+    overflowWrap: "break-word",
+    padding: "4px 60px 4px 4px",
+  },
+
+  messageMedia: {
+    objectFit: "cover",
+    width: 280,
+    maxHeight: 380,
+    borderRadius: "12px",
+    margin: "4px 0",
+    transition: "all 0.3s ease",
+    cursor: "pointer",
+    "&:hover": {
+      transform: "scale(1.02)",
+    },
+  },
+
+  timestamp: {
+    fontSize: 11,
+    position: "absolute",
+    bottom: 4,
+    right: 8,
+    color: "inherit",
+    opacity: 0.7,
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+  },
+
+  dailyTimestamp: {
+    alignItems: "center",
+    textAlign: "center",
+    alignSelf: "center",
+    width: "auto",
+    backgroundColor: theme.mode === 'light' ? "rgba(255, 255, 255, 0.9)" : "#ffffff",
+    margin: "16px 0",
+    borderRadius: "20px",
+    boxShadow: theme.mode === 'light' 
+      ? "0 1px 2px rgba(0, 0, 0, 0.1)" 
+      : "0 2px 4px rgba(0, 0, 0, 0.3)",
+    backdropFilter: "blur(10px)",
+    animation: "$fadeIn 0.5s ease-out",
+  },
+
+  "@keyframes fadeIn": {
+    from: {
+      opacity: 0,
+      transform: "scale(0.9)",
+    },
+    to: {
+      opacity: 1,
+      transform: "scale(1)",
+    },
+  },
+
+  dailyTimestampText: {
+    color: theme.mode === 'light' ? "#666" : "#b0b0b0",
+    padding: "6px 16px",
+    fontSize: "0.813rem",
+    fontWeight: 500,
+  },
+
+  ackIcons: {
+    fontSize: 16,
+    verticalAlign: "middle",
+    marginLeft: 2,
+  },
+
+  deletedIcon: {
+    fontSize: 16,
+    verticalAlign: "middle",
+    marginRight: 4,
+  },
+
+  ackDoneAllIcon: {
+    color: "#4FC3F7",
+    fontSize: 16,
+    verticalAlign: "middle",
+    marginLeft: 2,
+  },
+
+  downloadMedia: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    padding: "12px",
+  },
+
+  messageCenter: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: "8px 16px",
+    backgroundColor: theme.mode === 'light' ? "rgba(255, 255, 255, 0.9)" : "#ffffff",
+    borderRadius: "20px",
+    color: "#df3333",
+    fontSize: "0.875rem",
+    boxShadow: theme.mode === 'light' 
+      ? "0 1px 2px rgba(0, 0, 0, 0.1)" 
+      : "0 2px 4px rgba(0, 0, 0, 0.3)",
+    animation: "$fadeIn 0.5s ease-out",
+  },
+
+  messageCenterWrapper: {
+    position: "relative",
+    width: "fit-content",
+    margin: "0 auto 8px",
+    "&:hover #messageActionsButton": {
+      opacity: 1,
+      visibility: "visible",
+    },
+  },
+
+  ticketNunberClosed: {
+    backgroundColor: theme.mode === 'light' ? "rgba(255, 59, 48, 0.1)" : "#ffffff",
+    color: theme.mode === 'light' ? "#ff3b30" : "#ff3b30",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "0.813rem",
+    marginBottom: "8px",
+    fontWeight: 500,
+    animation: "$fadeIn 0.5s ease-out",
+    boxShadow: theme.mode === 'light' 
+      ? "none" 
+      : "0 2px 4px rgba(0, 0, 0, 0.3)",
+  },
+
+  ticketNunberOpen: {
+    backgroundColor: theme.mode === 'light' ? `${primaryColor}15` : "#ffffff",
+    color: primaryColor,
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "0.813rem",
+    fontWeight: 500,
+    animation: "$fadeIn 0.5s ease-out",
+    boxShadow: theme.mode === 'light' 
+      ? "none" 
+      : "0 2px 4px rgba(0, 0, 0, 0.3)",
+  },
+}));
+
+const reducer = (state, action) => {
+  if (action.type === "LOAD_MESSAGES") {
+    const messages = action.payload;
+    const newMessages = [];
+
+    messages.forEach((message) => {
+      const messageIndex = state.findIndex((m) => m.id === message.id);
+      if (messageIndex !== -1) {
+        state[messageIndex] = message;
+      } else {
+        newMessages.push(message);
+      }
+    });
+
+    return [...newMessages, ...state];
+  }
+
+  if (action.type === "ADD_MESSAGE") {
+    const newMessage = action.payload;
+    const messageIndex = state.findIndex((m) => m.id === newMessage.id);
+
+    if (messageIndex !== -1) {
+      state[messageIndex] = newMessage;
+    } else {
+      state.push(newMessage);
+    }
+
+    return [...state];
+  }
+
+  if (action.type === "UPDATE_MESSAGE") {
+    const messageToUpdate = action.payload;
+    const messageIndex = state.findIndex((m) => m.id === messageToUpdate.id);
+
+    if (messageIndex !== -1) {
+      state[messageIndex] = messageToUpdate;
+    }
+
+    return [...state];
+  }
+
+  if (action.type === "RESET") {
+    return [];
+  }
+};
+
+const MessagesList = ({ ticket, ticketId, isGroup }) => {
+  const classes = useStyles();
+
+  const [messagesList, dispatch] = useReducer(reducer, []);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const lastMessageRef = useRef();
+
+  const [selectedMessage, setSelectedMessage] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
+  const messageOptionsMenuOpen = Boolean(anchorEl);
+  const currentTicketId = useRef(ticketId);
+
+  const socketManager = useContext(SocketContext);
+
+  useEffect(() => {
+    dispatch({ type: "RESET" });
+    setPageNumber(1);
+
+    currentTicketId.current = ticketId;
+  }, [ticketId]);
+
+  useEffect(() => {
+    setLoading(true);
+    const delayDebounceFn = setTimeout(() => {
+      const fetchMessages = async () => {
+        if (ticketId === undefined) return;
+        try {
+          const { data } = await api.get("/messages/" + ticketId, {
+            params: { pageNumber },
+          });
+
+          if (currentTicketId.current === ticketId) {
+            dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
+            setHasMore(data.hasMore);
+            setLoading(false);
+          }
+
+          if (pageNumber === 1 && data.messages.length > 1) {
+            scrollToBottom();
+          }
+        } catch (err) {
+          setLoading(false);
+          toastError(err);
+        }
+      };
+      fetchMessages();
+    }, 500);
+    return () => {
+      clearTimeout(delayDebounceFn);
+    };
+  }, [pageNumber, ticketId]);
+
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.getSocket(companyId);
+
+    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
+
+    socket.on(`company-${companyId}-appMessage`, (data) => {
+      if (data.action === "create" && data.message.ticketId === currentTicketId.current) {
+        dispatch({ type: "ADD_MESSAGE", payload: data.message });
+        scrollToBottom();
+      }
+
+      if (data.action === "update" && data.message.ticketId === currentTicketId.current) {
+        dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [ticketId, ticket, socketManager]);
+
+  const loadMore = () => {
+    setPageNumber((prevPageNumber) => prevPageNumber + 1);
+  };
+
+  const scrollToBottom = () => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScroll = (e) => {
+    if (!hasMore) return;
+    const { scrollTop } = e.currentTarget;
+
+    if (scrollTop === 0) {
+      document.getElementById("messagesList").scrollTop = 1;
+    }
+
+    if (loading) {
+      return;
+    }
+
+    if (scrollTop < 50) {
+      loadMore();
+    }
+  };
+
+  const handleOpenMessageOptionsMenu = (e, message) => {
+    setAnchorEl(e.currentTarget);
+    setSelectedMessage(message);
+  };
+
+  const handleCloseMessageOptionsMenu = (e) => {
+    setAnchorEl(null);
+  };
+
+  const checkMessageMedia = (message) => {
+    if (message.mediaType === "locationMessage" && message.body.split('|').length >= 2) {
+      let locationParts = message.body.split('|')
+      let imageLocation = locationParts[0]
+      let linkLocation = locationParts[1]
+
+      let descriptionLocation = null
+
+      if (locationParts.length > 2)
+        descriptionLocation = message.body.split('|')[2]
+
+      return <LocationPreview image={imageLocation} link={linkLocation} description={descriptionLocation} />
+    }
+    else if (message.mediaType === "image") {
+      return <ModalImageCors imageUrl={message.mediaUrl} />;
+    } else if (message.mediaType === "audio") {
+      return (
+        <audio controls style={{ maxWidth: "100%", borderRadius: "20px" }}>
+          <source src={message.mediaUrl} type="audio/ogg"></source>
+        </audio>
+      );
+    } else if (message.mediaType === "video") {
+      return (
+        <video
+          className={classes.messageMedia}
+          src={message.mediaUrl}
+          controls
+        />
+      );
+    } else {
+      return (
+        <>
+          <div className={classes.downloadMedia}>
+            <Button
+              startIcon={<GetApp />}
+              style={{ 
+                color: primaryColor, 
+                borderColor: primaryColor,
+                borderRadius: "20px",
+                textTransform: "none",
+                fontWeight: 500,
+              }}
+              variant="outlined"
+              target="_blank"
+              href={message.mediaUrl}
+            >
+              {i18n.t("messagesList.header.buttons.download")}
+            </Button>
+          </div>
+          <div style={{marginBottom: message.body === "" ? 8 : 0}}>
+            <Divider />
+          </div>
+        </>
+      );
+    }
+  };
+
+  const renderMessageAck = (message) => {
+    if (message.ack === 1) {
+      return <AccessTime fontSize="small" className={classes.ackIcons} />;
+    }
+    if (message.ack === 2) {
+      return <Done fontSize="small" className={classes.ackIcons} />;
+    }
+    if (message.ack === 3) {
+      return <DoneAll fontSize="small" className={classes.ackIcons} />;
+    }
+    if (message.ack === 4 || message.ack === 5) {
+      return <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />;
+    }
+  };
+
+  const renderDailyTimestamps = (message, index) => {
+    if (index === 0) {
+      return (
+        <Fade in={true} timeout={500}>
+          <span
+            className={classes.dailyTimestamp}
+            key={`timestamp-${message.id}`}
+          >
+            <div className={classes.dailyTimestampText}>
+              {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+            </div>
+          </span>
+        </Fade>
+      );
+    }
+    if (index < messagesList.length - 1) {
+      let messageDay = parseISO(messagesList[index].createdAt);
+      let previousMessageDay = parseISO(messagesList[index - 1].createdAt);
+
+      if (!isSameDay(messageDay, previousMessageDay)) {
+        return (
+          <Fade in={true} timeout={500}>
+            <span
+              className={classes.dailyTimestamp}
+              key={`timestamp-${message.id}`}
+            >
+              <div className={classes.dailyTimestampText}>
+                {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+              </div>
+            </span>
+          </Fade>
+        );
+      }
+    }
+    if (index === messagesList.length - 1) {
+      return (
+        <div
+          key={`ref-${message.createdAt}`}
+          ref={lastMessageRef}
+          style={{ float: "left", clear: "both" }}
+        />
+      );
+    }
+  };
+
+  const renderNumberTicket = (message, index) => {
+    if (index < messagesList.length && index > 0) {
+      let messageTicket = message.ticketId;
+      let connectionName = message.ticket?.whatsapp?.name;
+      let previousMessageTicket = messagesList[index - 1].ticketId;
+
+      if (messageTicket !== previousMessageTicket) {
+        return (
+          <Fade in={true} timeout={500}>
+            <center>
+              <div className={classes.ticketNunberClosed}>
+                Conversa encerrada: {format(parseISO(messagesList[index - 1].createdAt), "dd/MM/yyyy HH:mm:ss")}
+              </div>
+
+              <div className={classes.ticketNunberOpen}>
+                Conversa iniciada: {format(parseISO(message.createdAt), "dd/MM/yyyy HH:mm:ss")}
+              </div>
+            </center>
+          </Fade>
+        );
+      }
+    }
+  };
+
+  const renderMessageDivider = (message, index) => {
+    if (index < messagesList.length && index > 0) {
+      let messageUser = messagesList[index].fromMe;
+      let previousMessageUser = messagesList[index - 1].fromMe;
+
+      if (messageUser !== previousMessageUser) {
+        return (
+          <span style={{ marginTop: 16 }} key={`divider-${message.id}`}></span>
+        );
+      }
+    }
+  };
+
+  const renderQuotedMessage = (message) => {
+    return (
+      <div
+        className={clsx(classes.quotedContainerLeft, {
+          [classes.quotedContainerRight]: message.fromMe,
+        })}
+      >
+        <span
+          className={clsx(classes.quotedSideColorLeft, {
+            [classes.quotedSideColorRight]: message.quotedMsg?.fromMe,
+          })}
+        ></span>
+        <div className={classes.quotedMsg}>
+          {!message.quotedMsg?.fromMe && (
+            <span className={classes.messageContactName}>
+              {message.quotedMsg?.contact?.name}
+            </span>
+          )}
+
+          {message.quotedMsg.mediaType === "audio"
+            && (
+              <div className={classes.downloadMedia}>
+                <audio controls>
+                  <source src={message.quotedMsg.mediaUrl} type="audio/ogg"></source>
+                </audio>
+              </div>
+            )
+          }
+          {message.quotedMsg.mediaType === "video"
+            && (
+              <video
+                className={classes.messageMedia}
+                src={message.quotedMsg.mediaUrl}
+                controls
+              />
+            )
+          }
+          {message.quotedMsg.mediaType === "application"
+            && (
+              <div className={classes.downloadMedia}>
+                <Button
+                  startIcon={<GetApp />}
+                  style={{ 
+                    color: primaryColor, 
+                    borderColor: primaryColor,
+                    borderRadius: "20px",
+                    textTransform: "none",
+                  }}
+                  variant="outlined"
+                  target="_blank"
+                  href={message.quotedMsg.mediaUrl}
+                >
+                  {i18n.t("messagesList.header.buttons.download")}
+                </Button>
+              </div>
+            )
+          }
+
+          {message.quotedMsg.mediaType === "image"
+            && (<ModalImageCors imageUrl={message.quotedMsg.mediaUrl} />)}
+
+          {message.quotedMsg.mediaType === "contactMessage"
+            && (
+                <span>{message.quotedMsg.body}</span>
+              )
+          }
+          {!message.quotedMsg.mediaType && message.quotedMsg.body && (
+            <span>{message.quotedMsg.body}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMessages = () => {
+    if (messagesList.length > 0) {
+      const viewMessagesList = messagesList.map((message, index) => {
+        if (message.mediaType === "call_log") {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              {renderNumberTicket(message, index)}
+              {renderMessageDivider(message, index)}
+              <Zoom in={true} timeout={300}>
+                <div className={classes.messageCenterWrapper}>
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="messageActionsButton"
+                    disabled={message.isDeleted}
+                    className={classes.messageActionsButton}
+                    onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+                  >
+                    <ExpandMore fontSize="small" />
+                  </IconButton>
+                  <div className={classes.messageCenter}>
+                    {isGroup && (
+                      <span className={classes.messageContactName}>
+                        {message.contact?.name}
+                      </span>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <PhoneMissed fontSize="small" />
+                      <span>{i18n.t("messagesList.lostCall")} {format(parseISO(message.createdAt), "HH:mm")}</span>
+                    </div>
+                  </div>
+                </div>
+              </Zoom>
+            </React.Fragment>
+          );
+        }
+
+        if (!message.fromMe) {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              {renderNumberTicket(message, index)}
+              {renderMessageDivider(message, index)}
+              <Zoom in={true} timeout={300}>
+                <div className={clsx(classes.messageWrapper, classes.messageWrapperLeft)}>
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="messageActionsButton"
+                    disabled={message.isDeleted}
+                    className={classes.messageActionsButton}
+                    onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+                  >
+                    <ExpandMore fontSize="small" />
+                  </IconButton>
+                  <div className={classes.messageLeft}>
+                    {isGroup && (
+                      <span className={classes.messageContactName}>
+                        {message.contact?.name}
+                      </span>
+                    )}
+
+                    {/* aviso de mensagem apagado pelo contato */}
+                    {message.isDeleted && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, opacity: 0.6 }}>
+                        <Block
+                          color="error"
+                          fontSize="small"
+                          className={classes.deletedIcon}
+                        />
+                        <span className={"message-deleted"}
+                        >{i18n.t("messagesList.deletedMessage")}
+                        </span>
+                      </div>
+                    )}
+
+                    {(message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard"
+                      //|| message.mediaType === "multi_vcard" 
+                    ) && checkMessageMedia(message)}
+                    <div className={classes.textContentItem}>
+                      {message.quotedMsg && renderQuotedMessage(message)}
+                      <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>
+                      <span className={classes.timestamp}>
+                        {message.isEdited && <span style={{ fontStyle: "italic", marginRight: 4 }}>Editada</span>}
+                        {format(parseISO(message.createdAt), "HH:mm")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Zoom>
+            </React.Fragment>
+          );
+        } else {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              {renderNumberTicket(message, index)}
+              {renderMessageDivider(message, index)}
+              <Zoom in={true} timeout={300}>
+                <div className={clsx(classes.messageWrapper, classes.messageWrapperRight)}>
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="messageActionsButton"
+                    disabled={message.isDeleted}
+                    className={classes.messageActionsButton}
+                    onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+                  >
+                    <ExpandMore fontSize="small" />
+                  </IconButton>
+                  <div className={classes.messageRight}>
+                    {(message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard"
+                      //|| message.mediaType === "multi_vcard" 
+                    ) && checkMessageMedia(message)}
+                    <div
+                      className={clsx(classes.textContentItem, {
+                        [classes.textContentItemDeleted]: message.isDeleted,
+                        [classes.textContentItemEdited]: message.isEdited,
+                      })}
+                    >
+                      {message.isDeleted && (
+                        <Block
+                          style={{ color: "rgba(255,255,255,0.6)" }}
+                          fontSize="small"
+                          className={classes.deletedIcon}
+                        />
+                      )}
+                      {message.quotedMsg && renderQuotedMessage(message)}
+                      <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>
+                      <span className={classes.timestamp}>
+                        {message.isEdited && <span style={{ fontStyle: "italic", marginRight: 4 }}>{i18n.t("messagesList.edited")}</span>}
+                        {format(parseISO(message.createdAt), "HH:mm")}
+                        {renderMessageAck(message)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Zoom>
+            </React.Fragment>
+          );
+        }
+      });
+      return viewMessagesList;
+    } else {
+      return (
+        <Fade in={true} timeout={1000}>
+          <div style={{ 
+            textAlign: "center", 
+            color: "#999", 
+            fontSize: "1rem",
+            marginTop: "20%",
+          }}>
+            {i18n.t("messagesList.saudation")}
+          </div>
+        </Fade>
+      );
+    }
+  };
+
+  return (
+    <div className={classes.messagesListWrapper}>
+      <MessageOptionsMenu
+        message={selectedMessage}
+        anchorEl={anchorEl}
+        menuOpen={messageOptionsMenuOpen}
+        handleClose={handleCloseMessageOptionsMenu}
+      />
+      <div
+        id="messagesList"
+        className={classes.messagesList}
+        onScroll={handleScroll}
+      >
+        {messagesList.length > 0 ? renderMessages() : []}
+      </div>
+      {loading && (
+        <div>
+          <CircularProgress className={classes.circleLoading} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MessagesList;

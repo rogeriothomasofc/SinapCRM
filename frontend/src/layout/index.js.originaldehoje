@@ -1,0 +1,278 @@
+import React, { useState, useContext, useEffect } from "react";
+import clsx from "clsx";
+import {
+  makeStyles,
+  Drawer,
+  Typography,
+  IconButton,
+  List,
+  Box,
+  Tooltip,
+} from "@material-ui/core";
+
+// Ícones modernos para menu
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import MenuIcon from "@material-ui/icons/Menu";
+// Ícones adicionais para as novas opções no rodapé
+import Brightness4Icon from "@material-ui/icons/Brightness4"; // Ícone para dark mode
+import LanguageIcon from "@material-ui/icons/Language"; // Ícone para idioma
+import VolumeUpIcon from "@material-ui/icons/VolumeUp"; // Ícone para volume
+
+import MainListItems from "./MainListItems";
+import UserModal from "../components/UserModal";
+import { AuthContext } from "../context/Auth/AuthContext";
+import BackdropLoading from "../components/BackdropLoading";
+import logo from "../assets/logo.png";
+
+// Diminuição da largura do menu quando expandido
+const drawerWidth = 230;
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    height: "100vh",
+    backgroundColor: theme.palette.fancyBackground || "#f5f5f5",
+  },
+  drawerPaper: {
+    position: "fixed",
+    height: "100%",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
+    borderRight: "none", // Removida a borda/linha divisória
+    overflowX: "hidden",
+    zIndex: 1200,
+  },
+  drawerPaperClose: {
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+    [theme.breakpoints.up("sm")]: {
+      width: theme.spacing(9),
+    },
+  },
+  toolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    padding: "0 16px",
+    minHeight: "64px",
+    [theme.breakpoints.down("sm")]: {
+      minHeight: "56px",
+    }
+  },
+  content: {
+    flexGrow: 1,
+    height: "100vh",
+    overflow: "auto",
+    marginLeft: theme.spacing(7),
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    [theme.breakpoints.up("sm")]: {
+      marginLeft: theme.spacing(9),
+    },
+  },
+  contentShift: {
+    marginLeft: drawerWidth,
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  },
+  // Modificado: botão menor, posicionado na altura da logo e sem efeito hover/transparência
+  menuButton: {
+    position: "fixed",
+    top: theme.spacing(2), // Movido para cima na altura da logo
+    left: ({ drawerOpen }) => drawerOpen 
+      ? drawerWidth - 15
+      : theme.spacing(7) - 15,
+    zIndex: 1300,
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    width: 30, // Tamanho reduzido de 40 para 30
+    height: 30, // Tamanho reduzido de 40 para 30
+    padding: 0,
+    transition: theme.transitions.create(['left'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    borderRadius: "50%",
+    color: theme.palette.primary.main,
+    opacity: 1,
+    // Sobrescreve o comportamento do MUI para IconButton no hover
+    "&:hover": {
+      backgroundColor: theme.palette.background.paper, // Mantém a mesma cor de fundo
+      opacity: 1, // Mantém a opacidade completa
+    },
+  },
+  listWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    height: "calc(100% - 64px)",
+    overflowY: "auto",
+    overflowX: "hidden",
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+      borderRadius: "3px",
+    },
+    "&::-webkit-scrollbar-thumb:hover": {
+      background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+    },
+  },
+  versionInfo: {
+    fontSize: 12,
+    padding: theme.spacing(1),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTop: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)',
+    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
+    marginTop: "auto",
+  },
+  footerIcons: {
+    display: "flex",
+    gap: theme.spacing(0.5),
+  },
+  footerIcon: {
+    fontSize: 18,
+    color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
+  },
+}));
+
+const LoggedInLayout = ({ children }) => {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, handleLogout, loading } = useContext(AuthContext);
+  // Estado para controle do tema dark/light (você pode integrá-lo ao seu sistema existente)
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Passamos o estado do drawer para os estilos
+  const classes = useStyles({ drawerOpen });
+  
+  // Toggle drawer function
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  // Toggle dark mode
+  const handleDarkModeToggle = () => {
+    setIsDarkMode(!isDarkMode);
+    // Implemente aqui a lógica para mudar o tema na sua aplicação
+  };
+
+  // Close drawer on smaller screens
+  const drawerClose = () => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (document.body.offsetWidth > 1200) {
+      setDrawerOpen(true);
+    }
+  }, []);
+
+  if (loading) {
+    return <BackdropLoading />;
+  }
+
+  return (
+    <div className={classes.root}>
+      <Drawer
+        variant="permanent"
+        classes={{
+          paper: clsx(
+            classes.drawerPaper,
+            !drawerOpen && classes.drawerPaperClose
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          <img 
+            src={logo} 
+            alt="logo" 
+            style={{ 
+              height: 40, 
+              maxWidth: drawerOpen ? 140 : 30,
+              objectFit: "contain",
+              transition: "max-width 0.3s" 
+            }} 
+          />
+        </div>
+        
+        <div className={classes.listWrapper}>
+          <List>
+            <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+          </List>
+          
+          {drawerOpen && (
+            <div className={classes.versionInfo}>
+              <span>v8.0.1</span>
+              <div className={classes.footerIcons}>
+                <Tooltip title="Mudar tema">
+                  <IconButton 
+                    size="small" 
+                    onClick={handleDarkModeToggle}
+                  >
+                    <Brightness4Icon className={classes.footerIcon} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Idioma">
+                  <IconButton size="small">
+                    <LanguageIcon className={classes.footerIcon} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Volume">
+                  <IconButton size="small">
+                    <VolumeUpIcon className={classes.footerIcon} />
+                  </IconButton>
+                </Tooltip>
+              </div>
+            </div>
+          )}
+        </div>
+      </Drawer>
+      
+      {/* Botão que sobrepõe o menu - modificado */}
+      <Tooltip title={drawerOpen ? "Recolher menu" : "Expandir menu"}>
+        <IconButton
+          className={classes.menuButton}
+          onClick={handleDrawerToggle}
+        >
+          {drawerOpen ? <ChevronLeftIcon fontSize="small" /> : <MenuIcon fontSize="small" />}
+        </IconButton>
+      </Tooltip>
+
+      <UserModal
+        open={false}
+        onClose={() => {}}
+        userId={user?.id}
+      />
+      
+      <main className={clsx(classes.content, drawerOpen && classes.contentShift)}>
+        <Box>
+          {children}
+        </Box>
+      </main>
+    </div>
+  );
+};
+
+export default LoggedInLayout;

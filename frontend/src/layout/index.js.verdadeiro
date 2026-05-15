@@ -1,0 +1,512 @@
+import React, { useState, useContext, useEffect } from "react";
+import clsx from "clsx";
+import {
+  makeStyles,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Typography,
+  Divider,
+  MenuItem,
+  IconButton,
+  Menu,
+  useTheme,
+  useMediaQuery,
+  Avatar,
+  Box,
+  Tooltip,
+  List,
+} from "@material-ui/core";
+
+// Modern Icons from Material UI
+import MenuIcon from "@material-ui/icons/Menu";
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import AccountCircle from "@material-ui/icons/AccountCircle";
+import RefreshIcon from "@material-ui/icons/Refresh";
+import NotificationsIcon from "@material-ui/icons/Notifications";
+import ExitToAppIcon from "@material-ui/icons/ExitToApp";
+import PersonIcon from "@material-ui/icons/Person";
+import Brightness4Icon from '@material-ui/icons/Brightness4';
+import Brightness7Icon from '@material-ui/icons/Brightness7';
+import { LanguageOutlined } from "@material-ui/icons";
+
+import MainListItems from "./MainListItems";
+import NotificationsPopOver from "../components/NotificationsPopOver";
+import NotificationsVolume from "../components/NotificationsVolume";
+import UserModal from "../components/UserModal";
+import { AuthContext } from "../context/Auth/AuthContext";
+import BackdropLoading from "../components/BackdropLoading";
+import { i18n } from "../translate/i18n";
+import toastError from "../errors/toastError";
+import AnnouncementsPopover from "../components/AnnouncementsPopover";
+
+import logo from "../assets/logo.png";
+import { SocketContext } from "../context/Socket/SocketContext";
+import ChatPopover from "../pages/Chat/ChatPopover";
+
+import { useDate } from "../hooks/useDate";
+
+import ColorModeContext from "../layout/themeContext";
+import LanguageControl from "../components/LanguageControl";
+
+const drawerWidth = 270;
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    height: "100vh",
+    [theme.breakpoints.down("sm")]: {
+      height: "calc(100vh - 56px)",
+    },
+    backgroundColor: theme.palette.fancyBackground,
+    '& .MuiButton-outlinedPrimary': {
+      color: theme.mode === 'light' ? '#FFF' : '#FFF',
+      backgroundColor: theme.mode === 'light' ? theme.palette.primary.main : '#1c1c1c',
+    },
+    '& .MuiTab-textColorPrimary.Mui-selected': {
+      color: theme.mode === 'light' ? 'Primary' : '#FFF',
+    }
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    backgroundColor: theme.palette.primary.main,
+  },
+  toolbar: {
+    paddingRight: 24,
+    color: theme.palette.dark.main,
+    background: theme.palette.barraSuperior,
+  },
+  toolbarIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 16px",
+    minHeight: "64px",
+    [theme.breakpoints.down("sm")]: {
+      height: "56px"
+    }
+  },
+  appBar: {
+    zIndex: theme.zIndex.drawer + 1,
+    transition: theme.transitions.create(["width", "margin"], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    boxShadow: theme.mode === 'light' ? '0px 2px 4px -1px rgba(0,0,0,0.1)' : 'none',
+  },
+  appBarShift: {
+    marginLeft: drawerWidth,
+    width: `calc(100% - ${drawerWidth}px)`,
+    transition: theme.transitions.create(["width", "margin"], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    [theme.breakpoints.down("sm")]: {
+      display: "none"
+    }
+  },
+  menuButton: {
+    marginRight: 36,
+  },
+  menuButtonHidden: {
+    display: "none",
+  },
+  title: {
+    flexGrow: 1,
+    fontSize: 16,
+    fontWeight: 500,
+    color: "white",
+  },
+  drawerPaper: {
+    position: "relative",
+    whiteSpace: "nowrap",
+    width: drawerWidth,
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    [theme.breakpoints.down("sm")]: {
+      width: "100%"
+    },
+    ...theme.scrollbarStylesSoft,
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
+    borderRight: theme.mode === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)',
+  },
+  drawerPaperClose: {
+    overflowX: "hidden",
+    transition: theme.transitions.create("width", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    width: theme.spacing(7),
+    [theme.breakpoints.up("sm")]: {
+      width: theme.spacing(9),
+    },
+    [theme.breakpoints.down("sm")]: {
+      width: "100%"
+    }
+  },
+  appBarSpacer: {
+    minHeight: "64px",
+    [theme.breakpoints.down("sm")]: {
+      minHeight: "56px",
+    }
+  },
+  content: {
+    flex: 1,
+    overflow: "auto",
+  },
+  containerWithScroll: {
+    flex: 1,
+    padding: theme.spacing(1),
+    overflowY: "auto",
+    ...theme.scrollbarStyles,
+  },
+  logo: {
+    width: "auto",
+    height: 40,
+    maxWidth: 160,
+    [theme.breakpoints.down("sm")]: {
+      height: 35,
+      maxWidth: 120,
+    },
+  },
+  userInfo: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: theme.spacing(2, 1),
+    borderBottom: theme.mode === 'dark' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)',
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 500,
+    marginTop: theme.spacing(1),
+    color: theme.mode === 'dark' ? '#fff' : theme.palette.text.primary,
+  },
+  userRole: {
+    fontSize: 12,
+    color: theme.mode === 'dark' ? 'rgba(255,255,255,0.7)' : theme.palette.text.secondary,
+  },
+  iconButton: {
+    margin: theme.spacing(0, 0.5),
+  },
+  iconButtonLabel: {
+    color: "white",
+  },
+  versionInfo: {
+    fontSize: 12,
+    padding: theme.spacing(1),
+    textAlign: "right",
+    fontWeight: 500,
+    color: theme.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
+  }
+}));
+
+const LoggedInLayout = ({ children, themeToggle }) => {
+  const classes = useStyles();
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { handleLogout, loading } = useContext(AuthContext);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerVariant, setDrawerVariant] = useState("permanent");
+  const { user } = useContext(AuthContext);
+
+  const theme = useTheme();
+  const { colorMode } = useContext(ColorModeContext);
+  const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
+
+  const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
+
+  const { dateToClient } = useDate();
+
+  // Languages
+  const [anchorElLanguage, setAnchorElLanguage] = useState(null);
+  const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
+
+  const socketManager = useContext(SocketContext);
+
+  useEffect(() => {
+    if (document.body.offsetWidth > 1200) {
+      setDrawerOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerVariant("temporary");
+    } else {
+      setDrawerVariant("permanent");
+    }
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    const userId = localStorage.getItem("userId");
+
+    const socket = socketManager.getSocket(companyId);
+
+    socket.on(`company-${companyId}-auth`, (data) => {
+      if (data.user.id === +userId) {
+        toastError("Sua conta foi acessada em outro computador.");
+        setTimeout(() => {
+          localStorage.clear();
+          window.location.reload();
+        }, 1000);
+      }
+    });
+
+    socket.emit("userStatus");
+    const interval = setInterval(() => {
+      socket.emit("userStatus");
+    }, 1000 * 60 * 5);
+
+    return () => {
+      socket.disconnect();
+      clearInterval(interval);
+    };
+  }, [socketManager]);
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+    setMenuOpen(true);
+  };
+
+  const handlemenuLanguage = (event) => {
+    setAnchorElLanguage(event.currentTarget);
+    setMenuLanguageOpen(true);
+  }
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setMenuOpen(false);
+  };
+
+  const handleCloseMenuLanguage = () => {
+    setAnchorElLanguage(null);
+    setMenuLanguageOpen(false);
+  }
+
+  const handleOpenUserModal = () => {
+    setUserModalOpen(true);
+    handleCloseMenu();
+  };
+
+  const handleClickLogout = () => {
+    handleCloseMenu();
+    handleLogout();
+  };
+
+  const drawerClose = () => {
+    if (document.body.offsetWidth < 600) {
+      setDrawerOpen(false);
+    }
+  };
+
+  const handleRefreshPage = () => {
+    window.location.reload(false);
+  }
+
+  const toggleColorMode = () => {
+    colorMode.toggleColorMode();
+  }
+
+  if (loading) {
+    return <BackdropLoading />;
+  }
+
+  const getUserInitials = (name) => {
+    if (!name) return "U";
+    const names = name.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  };
+
+  return (
+    <div className={classes.root}>
+      <Drawer
+        variant={drawerVariant}
+        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        classes={{
+          paper: clsx(
+            classes.drawerPaper,
+            !drawerOpen && classes.drawerPaperClose
+          ),
+        }}
+        open={drawerOpen}
+      >
+        <div className={classes.toolbarIcon}>
+          <img src={logo} className={classes.logo} alt="logo" />
+          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
+            <ChevronLeftIcon />
+          </IconButton>
+        </div>
+        <Divider />
+        
+        <List className={classes.containerWithScroll}>
+          <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+        </List>
+        {drawerOpen && (
+          <>
+            <Divider />
+            <Typography className={classes.versionInfo}>
+              v8.0.1
+            </Typography>
+          </>
+        )}
+      </Drawer>
+      <UserModal
+        open={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        userId={user?.id}
+      />
+      <AppBar
+        position="absolute"
+        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        color="primary"
+      >
+        <Toolbar className={classes.toolbar}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="open drawer"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            className={clsx(
+              classes.menuButton,
+              drawerOpen && classes.menuButtonHidden
+            )}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          <Typography
+            component="h1"
+            variant="h6"
+            color="inherit"
+            noWrap
+            className={classes.title}
+          >
+            {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
+              <>
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>! ({i18n.t("mainDrawer.appBar.greeting.active")} {dateToClient(user?.company?.dueDate)})
+              </>
+            ) : (
+              <>
+                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>!
+              </>
+            )}
+          </Typography>
+          
+          <Box display="flex" alignItems="center">
+            <Tooltip title={i18n.t("mainDrawer.appBar.language")}>
+              <IconButton
+                className={classes.iconButton}
+                color="inherit"
+                onClick={handlemenuLanguage}
+              >
+                <LanguageOutlined className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="menu-appbar-language"
+              anchorEl={anchorElLanguage}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuLanguageOpen}
+              onClose={handleCloseMenuLanguage}
+            >
+              <MenuItem>
+                <LanguageControl />
+              </MenuItem>
+            </Menu>
+            
+            <Tooltip title={theme.mode === 'dark' ? i18n.t("mainDrawer.appBar.lightMode") : i18n.t("mainDrawer.appBar.darkMode")}>
+              <IconButton
+                className={classes.iconButton}
+                color="inherit"
+                onClick={toggleColorMode}
+              >
+                {theme.mode === 'dark' ? 
+                  <Brightness7Icon className={classes.iconButtonLabel} /> : 
+                  <Brightness4Icon className={classes.iconButtonLabel} />
+                }
+              </IconButton>
+            </Tooltip>
+
+            <NotificationsVolume
+              setVolume={setVolume}
+              volume={volume}
+            />
+
+            <Tooltip title={i18n.t("mainDrawer.appBar.refresh")}>
+              <IconButton
+                className={classes.iconButton}
+                color="inherit"
+                onClick={handleRefreshPage}
+              >
+                <RefreshIcon className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+
+            {user.id && (
+              <NotificationsPopOver volume={volume} />
+            )}
+
+            <AnnouncementsPopover />
+
+            <ChatPopover />
+
+            <Tooltip title={i18n.t("mainDrawer.appBar.user.profile")}>
+              <IconButton
+                className={classes.iconButton}
+                color="inherit"
+                onClick={handleMenu}
+              >
+                <AccountCircle className={classes.iconButtonLabel} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              getContentAnchorEl={null}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
+              open={menuOpen}
+              onClose={handleCloseMenu}
+            >
+              <MenuItem onClick={handleOpenUserModal}>
+                <PersonIcon fontSize="small" style={{ marginRight: 8 }} />
+                {i18n.t("mainDrawer.appBar.user.profile")}
+              </MenuItem>
+              <MenuItem onClick={handleClickLogout}>
+                <ExitToAppIcon fontSize="small" style={{ marginRight: 8 }} />
+                {i18n.t("mainDrawer.appBar.user.logout")}
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </AppBar>
+      <main className={classes.content}>
+        <div className={classes.appBarSpacer} />
+        {children ? children : null}
+      </main>
+    </div>
+  );
+};
+
+export default LoggedInLayout;

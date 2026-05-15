@@ -1,0 +1,152 @@
+import React from "react";
+import { useParams } from "react-router-dom";
+import { makeStyles, alpha } from "@material-ui/core/styles";
+import { 
+  Grid, 
+  Paper, 
+  Box,
+  Typography,
+  Fade,
+  Divider
+} from "@material-ui/core";
+import TicketsManager from "../../components/TicketsManagerTabs/";
+import Ticket from "../../components/Ticket/";
+import logo from "../../assets/logo.png";
+import { i18n } from "../../translate/i18n";
+
+// Estilos modernizados
+const useStyles = makeStyles(theme => ({
+  mainContainer: {
+    display: "flex",
+    flexDirection: "column",
+    height: "calc(100vh - 64px)", // Altura ajustada para considerar o cabeçalho da aplicação
+    padding: theme.spacing(2),
+    backgroundColor: "#F7F9FC",
+    overflow: "hidden"
+  },
+  contentWrapper: {
+    display: "flex",
+    flexGrow: 1,
+    borderRadius: 16,
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden"
+  },
+  ticketsColumn: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    borderRight: "1px solid rgba(0, 0, 0, 0.06)",
+    backgroundColor: "#FAFBFF",
+    position: "relative",
+    transition: "all 0.3s ease"
+  },
+  chatColumn: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    position: "relative",
+    overflow: "hidden"
+  },
+  welcomeContainer: {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100%",
+    backgroundColor: theme.palette.boxticket || "#F9FAFE",
+    backgroundImage: "radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.8) 0%, rgba(240, 242, 255, 0.6) 100%)",
+    borderRadius: 0,
+    border: "none",
+    boxShadow: "none",
+    padding: theme.spacing(3)
+  },
+  logoWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(4)
+  },
+  logoImage: {
+    width: "70%",
+    maxWidth: 320,
+    filter: "drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1))",
+    transition: "transform 0.3s ease",
+    "&:hover": {
+      transform: "scale(1.02)"
+    }
+  },
+  welcomeText: {
+    fontSize: 18,
+    color: "#3A3E59", 
+    fontWeight: 500,
+    marginTop: theme.spacing(3),
+    textAlign: "center",
+    maxWidth: 480
+  },
+  welcomeSubText: {
+    fontSize: 14,
+    color: "#717790",
+    marginTop: theme.spacing(1),
+    textAlign: "center",
+    maxWidth: 400
+  },
+  divider: {
+    margin: theme.spacing(2, 0),
+    width: "40%",
+    backgroundColor: alpha(theme.palette.primary.main, 0.1)
+  }
+}));
+
+const TicketsCustom = () => {
+  const classes = useStyles();
+  const { ticketId } = useParams();
+
+  return (
+    <Box className={classes.mainContainer}>
+      <Box className={classes.contentWrapper}>
+        {/* Coluna de Gerenciamento de Tickets */}
+        <Grid item xs={4} className={classes.ticketsColumn}>
+          <TicketsManager />
+        </Grid>
+
+        {/* Coluna de Chat/Ticket ou Mensagem de Boas-vindas */}
+        <Grid item xs={8} className={classes.chatColumn}>
+          {ticketId ? (
+            // Se há um ticket selecionado, exibe a interface de chat
+            <Fade in={true} timeout={500}>
+              <Box style={{ height: "100%" }}>
+                <Ticket />
+              </Box>
+            </Fade>
+          ) : (
+            // Se não há ticket selecionado, exibe a mensagem de boas-vindas
+            <Fade in={true} timeout={800}>
+              <Paper elevation={0} className={classes.welcomeContainer}>
+                <Box className={classes.logoWrapper}>
+                  <img 
+                    src={logo} 
+                    alt="Logo" 
+                    className={classes.logoImage}
+                  />
+                  <Divider className={classes.divider} />
+                  <Typography variant="h5" className={classes.welcomeText}>
+                    {i18n.t("chat.welcomeTitle") || "Central de Atendimento"}
+                  </Typography>
+                  <Typography variant="body1" className={classes.welcomeSubText}>
+                    {i18n.t("chat.selectTicketMessage") || "Selecione um ticket para iniciar o atendimento"}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Fade>
+          )}
+        </Grid>
+      </Box>
+    </Box>
+  );
+};
+
+export default TicketsCustom;

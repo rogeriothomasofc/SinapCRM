@@ -1,0 +1,234 @@
+import React from "react";
+import { Paper, Chip, Typography, Badge } from "@material-ui/core";
+import { makeStyles } from "@material-ui/core/styles";
+import Autocomplete from "@material-ui/lab/Autocomplete";
+import TextField from "@material-ui/core/TextField";
+import LocalOfferIcon from "@material-ui/icons/LocalOffer";
+import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
+
+const useStyles = makeStyles(theme => ({
+	ticketHeader: {
+		display: "flex",
+		flexDirection: "column",
+		backgroundColor: theme.palette.background.paper,
+		flex: "none",
+		borderRadius: 0,
+		borderTopRightRadius: 12,
+		boxShadow: "none",
+		overflow: "visible",
+		position: "relative",
+		zIndex: 2,
+		width: "100%",
+		boxSizing: "border-box",
+	},
+	
+	mainHeader: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		backgroundColor: theme.palette.tabHeaderBackground,
+		borderBottom: "none",
+		borderTopRightRadius: 12,
+		minHeight: 42,
+		padding: "6px 12px",
+		width: "100%",
+		boxSizing: "border-box",
+		gap: theme.spacing(1),
+		[theme.breakpoints.down("sm")]: {
+			flexWrap: "wrap",
+			justifyContent: "center",
+		}
+	},
+	
+	ticketInfoWrapper: {
+		display: "flex",
+		alignItems: "center",
+		minWidth: 0,
+		gap: theme.spacing(1),
+	},
+	
+	tagsContainer: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: theme.spacing(0.5),
+		minWidth: 0,
+		margin: "0 auto",
+		flex: "0 1 auto",
+		maxWidth: "50%",
+	},
+	
+	tagsIcon: {
+		fontSize: 14,
+		color: theme.palette.text.secondary,
+		marginRight: 2,
+	},
+	
+	tagsAutocomplete: {
+		width: "100%",
+		maxWidth: 400,
+		"& .MuiOutlinedInput-root": {
+			padding: "0 4px",
+			minHeight: 28,
+			backgroundColor: theme.palette.background.paper,
+			borderRadius: 14,
+			fontSize: "0.75rem",
+			"& fieldset": {
+				borderColor: "transparent",
+			},
+			"&:hover fieldset": {
+				borderColor: theme.palette.divider,
+			},
+			"&.Mui-focused fieldset": {
+				borderColor: theme.palette.primary.main,
+				borderWidth: 1,
+			}
+		},
+		"& .MuiAutocomplete-tag": {
+			height: 18,
+			margin: 1,
+		},
+		"& .MuiChip-root": {
+			height: 20,
+			fontSize: "0.65rem",
+			fontWeight: 600,
+			borderRadius: 10,
+			"& .MuiChip-label": {
+				padding: "0 5px",
+			},
+			"& .MuiChip-deleteIcon": {
+				fontSize: 14,
+				marginLeft: -2,
+				marginRight: 2,
+			}
+		},
+		"& .MuiAutocomplete-popupIndicator, & .MuiAutocomplete-clearIndicator": {
+			padding: 2,
+			"& .MuiSvgIcon-root": {
+				fontSize: 14,
+			}
+		},
+		"& .MuiAutocomplete-inputRoot": {
+			paddingRight: "35px !important",
+			"& input": {
+				padding: "3px 4px !important",
+				minWidth: "50px !important",
+			}
+		}
+	},
+	
+	tagChip: {
+		height: 20,
+		marginRight: 2,
+		fontWeight: 600,
+		borderRadius: 10,
+		fontSize: "0.65rem",
+		border: "none",
+		cursor: "pointer",
+		"& .MuiChip-label": {
+			padding: "0 6px",
+			textTransform: "uppercase",
+		},
+		"&:hover": {
+			opacity: 0.8,
+		}
+	},
+	
+	compactBadge: {
+		"& .MuiBadge-badge": {
+			fontSize: "0.6rem",
+			height: 14,
+			minWidth: 14,
+			padding: "0 4px",
+			right: -2,
+			top: -2,
+		}
+	},
+}));
+
+const TicketHeader = ({ loading, children, ticket, tags, onTagsChange }) => {
+	const classes = useStyles();
+
+	if (loading) {
+		return <TicketHeaderSkeleton />;
+	}
+
+	// Separa os componentes children em TicketInfo e TicketActionButtons
+	const childrenArray = React.Children.toArray(children);
+	const ticketInfo = childrenArray[0];
+	const ticketActionButtons = childrenArray[1];
+
+	return (
+		<Paper square elevation={0} className={classes.ticketHeader}>
+			<div className={classes.mainHeader}>
+				<div className={classes.ticketInfoWrapper}>
+					{ticketInfo}
+				</div>
+				
+				{ticket && (
+					<div className={classes.tagsContainer}>
+						<Badge 
+							badgeContent={tags.selected?.length || 0} 
+							color="primary" 
+							max={99}
+							invisible={!tags.selected?.length}
+							className={classes.compactBadge}
+						>
+							<LocalOfferIcon className={classes.tagsIcon} />
+						</Badge>
+						
+						<div className={classes.tagsAutocomplete}>
+							<Autocomplete
+								multiple
+								size="small"
+								options={tags.allTags || []}
+								value={tags.selected || []}
+								freeSolo
+								onChange={(e, v, r) => onTagsChange(v, r)}
+								getOptionLabel={(option) => option.name || option}
+								renderTags={(value, getTagProps) =>
+									value.map((option, index) => (
+										<Chip
+											key={index}
+											variant="outlined"
+											className={classes.tagChip}
+											style={{
+												backgroundColor: option.color || '#e0e0e0',
+												color: option.color ? "#FFF" : "#666",
+											}}
+											label={(option.name || option).toUpperCase()}
+											{...getTagProps({ index })}
+											size="small"
+										/>
+									))
+								}
+								renderInput={(params) => (
+									<TextField 
+										{...params} 
+										variant="outlined" 
+										placeholder={tags.selected?.length ? "+" : "Tags"} 
+									/>
+								)}
+								PaperComponent={({ children }) => (
+									<Paper style={{ 
+										marginTop: 2,
+										borderRadius: 6,
+										boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+										zIndex: 1400,
+										position: "absolute",
+									}}>
+										{children}
+									</Paper>
+								)}
+							/>
+						</div>
+					</div>
+				)}
+				
+				{ticketActionButtons}
+			</div>
+		</Paper>
+	);
+};
+
+export default TicketHeader;
