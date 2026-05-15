@@ -13,7 +13,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN rm -f package-lock.json
 
 COPY backend/package*.json ./
-RUN yarn install --network-timeout 600000
+RUN yarn install --network-timeout 600000 && \
+    rm -rf node_modules/@types/multer/node_modules
 COPY backend/ .
 
 # Configure git to use HTTPS instead of SSH
