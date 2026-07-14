@@ -25,7 +25,6 @@ import CodeOutlinedIcon from "@material-ui/icons/CodeOutlined";
 import AttachMoneyOutlinedIcon from "@material-ui/icons/AttachMoneyOutlined";
 import HelpOutlineOutlinedIcon from "@material-ui/icons/HelpOutlineOutlined";
 import TuneOutlinedIcon from "@material-ui/icons/TuneOutlined";
-import BrushOutlinedIcon from "@material-ui/icons/BrushOutlined";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -241,7 +240,6 @@ const SettingsCustom = () => {
       items: [
         { icon: <AttachMoneyOutlinedIcon />, label: "Financeiro", desc: "Assinatura e pagamentos", path: "/financeiro", always: true },
         { icon: <HelpOutlineOutlinedIcon />, label: "Ajuda", desc: "Tutoriais e suporte", path: "/helps", always: true },
-        { icon: <BrushOutlinedIcon />, label: "Identidade Visual", desc: "Logo, cores e nome do sistema", path: "/whitelabel", show: isSuper() },
       ],
     },
   ];

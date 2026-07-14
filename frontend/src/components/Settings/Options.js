@@ -99,17 +99,6 @@ export default function Options(props) {
   const [loadingSettingsTransfTicket, setLoadingSettingsTransfTicket] = useState(false);
   const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
 
-  // Meta CAPI
-  const [metaPixelId, setMetaPixelId] = useState("");
-  const [metaAccessToken, setMetaAccessToken] = useState("");
-  const [metaCAPIEnabled, setMetaCAPIEnabled] = useState("disabled");
-  const [loadingMetaCAPI, setLoadingMetaCAPI] = useState(false);
-  const [capiRules, setCapiRules] = useState({
-    leadOnNewFromAd: true,
-    completeOnClose: true,
-    eventOnClose: "CompleteRegistration"
-  });
-
   const { update } = useSettings();
 
   useEffect(() => {
@@ -145,18 +134,6 @@ export default function Options(props) {
       const chatbotType = settings.find((s) => s.key === "chatBotType");
       if (chatbotType) {
         setChatbotType(chatbotType.value);
-      }
-      const metaPixelIdSetting = settings.find((s) => s.key === "metaPixelId");
-      if (metaPixelIdSetting) setMetaPixelId(metaPixelIdSetting.value || "");
-      const metaAccessTokenSetting = settings.find((s) => s.key === "metaAccessToken");
-      if (metaAccessTokenSetting) setMetaAccessToken(metaAccessTokenSetting.value || "");
-      const metaCAPIEnabledSetting = settings.find((s) => s.key === "metaCAPIEnabled");
-      if (metaCAPIEnabledSetting) setMetaCAPIEnabled(metaCAPIEnabledSetting.value || "disabled");
-      const capiRulesSetting = settings.find((s) => s.key === "capiRules");
-      if (capiRulesSetting?.value) {
-        try {
-          setCapiRules(prev => ({ ...prev, ...JSON.parse(capiRulesSetting.value) }));
-        } catch (_) {}
       }
     }
   }, [settings]);
@@ -252,19 +229,6 @@ export default function Options(props) {
     setLoadingSettingsTransfTicket(false);
   }
 
-  async function handleSaveMetaCAPI() {
-    setLoadingMetaCAPI(true);
-    try {
-      await update({ key: "metaPixelId", value: metaPixelId });
-      await update({ key: "metaAccessToken", value: metaAccessToken });
-      await update({ key: "metaCAPIEnabled", value: metaCAPIEnabled });
-      await update({ key: "capiRules", value: JSON.stringify(capiRules) });
-      toast.success("Configurações do Meta CAPI salvas!");
-    } catch (e) {
-      toast.error("Erro ao salvar configurações do Meta CAPI");
-    }
-    setLoadingMetaCAPI(false);
-  }
 
   return (
     <Box className={classes.container}>
@@ -424,115 +388,6 @@ export default function Options(props) {
               </Select>
               {loadingSendGreetingMessageOneQueues && <LinearProgress className={classes.loadingProgress} />}
             </FormControl>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      <Paper className={classes.paper} style={{ marginTop: 24 }}>
-        <Typography className={classes.sectionTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          📢 Meta Conversions API (CAPI) — Rastreamento de Anúncios WhatsApp
-        </Typography>
-        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-          Quando um cliente clicar num anúncio de WhatsApp e enviar mensagem, o sistema captura o clique e envia automaticamente um evento ao Meta para registrar o lead — e um segundo evento quando o atendimento for encerrado. Isso permite que o Meta otimize seus anúncios para atrair mais clientes qualificados.
-        </Typography>
-
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
-            <FormControl variant="outlined" size="small" fullWidth>
-              <InputLabel>CAPI Ativado</InputLabel>
-              <Select
-                value={metaCAPIEnabled}
-                onChange={(e) => setMetaCAPIEnabled(e.target.value)}
-                label="CAPI Ativado"
-              >
-                <MenuItem value="disabled">Desativado</MenuItem>
-                <MenuItem value="enabled">Ativado</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              label="Pixel ID"
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={metaPixelId}
-              onChange={(e) => setMetaPixelId(e.target.value)}
-              placeholder="Ex: 1234567890123456"
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={12} md={4}>
-            <TextField
-              label="Token de Acesso (CAPI)"
-              variant="outlined"
-              size="small"
-              fullWidth
-              value={metaAccessToken}
-              onChange={(e) => setMetaAccessToken(e.target.value)}
-              placeholder="EAAxxxxxxxx..."
-              type="password"
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <Divider style={{ margin: "4px 0 12px" }} />
-            <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
-              Regras de conversão
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={capiRules.leadOnNewFromAd}
-                  onChange={(e) => setCapiRules(r => ({ ...r, leadOnNewFromAd: e.target.checked }))}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label={<Typography variant="body2">Registrar novo contato ao Meta quando iniciar atendimento de anúncio</Typography>}
-            />
-            <br />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={capiRules.completeOnClose}
-                  onChange={(e) => setCapiRules(r => ({ ...r, completeOnClose: e.target.checked }))}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label={<Typography variant="body2">Enviar evento ao concluir atendimento</Typography>}
-            />
-            {capiRules.completeOnClose && (
-              <Box style={{ marginLeft: 42, marginTop: 8 }}>
-                <FormControl variant="outlined" size="small">
-                  <InputLabel>Evento ao concluir</InputLabel>
-                  <Select
-                    value={capiRules.eventOnClose}
-                    onChange={(e) => setCapiRules(r => ({ ...r, eventOnClose: e.target.value }))}
-                    label="Evento ao concluir"
-                    style={{ minWidth: 260 }}
-                  >
-                    <MenuItem value="Lead">Lead — novo contato</MenuItem>
-                    <MenuItem value="CompleteRegistration">Atendimento concluído (recomendado)</MenuItem>
-                    <MenuItem value="Purchase">Venda realizada</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            )}
-          </Grid>
-
-          <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSaveMetaCAPI}
-              disabled={loadingMetaCAPI}
-            >
-              {loadingMetaCAPI ? "Salvando..." : "Salvar configurações do Meta CAPI"}
-            </Button>
-            {loadingMetaCAPI && <LinearProgress style={{ marginTop: 8 }} />}
           </Grid>
         </Grid>
       </Paper>

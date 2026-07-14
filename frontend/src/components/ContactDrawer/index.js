@@ -17,10 +17,6 @@ import PersonIcon from "@material-ui/icons/Person";
 import PhoneIcon from "@material-ui/icons/Phone";
 import EmailIcon from "@material-ui/icons/Email";
 import EditIcon from "@material-ui/icons/Edit";
-import CakeIcon from "@material-ui/icons/Cake";
-import BusinessIcon from "@material-ui/icons/Business";
-import HomeIcon from "@material-ui/icons/Home";
-import FingerprintIcon from "@material-ui/icons/Fingerprint";
 import LabelIcon from "@material-ui/icons/Label";
 import EventNoteIcon from "@material-ui/icons/EventNote";
 import HistoryIcon from "@material-ui/icons/History";
@@ -192,12 +188,6 @@ const InfoRow = ({ icon: Icon, label, value, link, classes }) => {
 	);
 };
 
-const formatBirthDate = (date) => {
-	if (!date) return null;
-	const [y, m, d] = date.substring(0, 10).split("-");
-	return `${d}/${m}/${y}`;
-};
-
 const statusLabel = { open: "Aberto", closed: "Encerrado", pending: "Pendente" };
 const statusClass = { open: "statusOpen", closed: "statusClosed", pending: "statusPending" };
 
@@ -347,25 +337,6 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								<InfoRow icon={PhoneIcon} label="Telefone" value={contact?.number} link={`tel:${contact?.number}`} classes={classes} />
 								<InfoRow icon={EmailIcon} label="E-mail" value={contact?.email} link={`mailto:${contact?.email}`} classes={classes} />
 							</div>
-
-							{/* Perfil */}
-							{(contact?.businessName || contact?.cpf || contact?.birthDate || contact?.cidade) && (
-								<>
-									<Divider />
-									<div className={classes.infoBlock}>
-										<div className={classes.sectionLabel}>Perfil</div>
-										<InfoRow icon={BusinessIcon} label="Empresa / Loja" value={contact?.businessName} classes={classes} />
-										<InfoRow icon={FingerprintIcon} label="CPF / CNPJ" value={contact?.cpf} classes={classes} />
-										<InfoRow icon={CakeIcon} label="Aniversário" value={formatBirthDate(contact?.birthDate)} classes={classes} />
-										<InfoRow
-											icon={HomeIcon}
-											label="Localização"
-											value={[contact?.cidade, contact?.estado].filter(Boolean).join(" — ")}
-											classes={classes}
-										/>
-									</div>
-								</>
-							)}
 
 							{/* Etiquetas */}
 							{ticket && (

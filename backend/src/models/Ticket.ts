@@ -164,18 +164,6 @@ class Ticket extends Model<Ticket> {
 
   @Column(DataType.JSON)
   dataWebhook: {} | null;
-
-  @Column
-  ctwaClid: string;
-
-  @Column
-  adSourceId: string;
-
-  @Column
-  adSourceUrl: string;
-
-  @Column
-  adTitle: string;
 }
 
 export default Ticket;

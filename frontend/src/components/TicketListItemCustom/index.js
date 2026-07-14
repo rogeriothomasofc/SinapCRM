@@ -307,11 +307,6 @@ const TicketListItemCustom = ({ ticket }) => {
                   </span>
                 ))}
                 {tags.length > 2 && <span className={classes.tag} style={{ backgroundColor: "#f5f5f5", color: "#616161" }}>+{tags.length - 2}</span>}
-                {ticket.ctwaClid && (
-                  <span className={classes.tag} style={{ backgroundColor: "#fff3e020", color: "#e65100", fontWeight: 600 }}>
-                    📢 Anúncio
-                  </span>
-                )}
               </div>
             </>
           }

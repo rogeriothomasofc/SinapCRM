@@ -344,7 +344,6 @@ const TicketsManagerTabs = () => {
 	const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
 	const [selectedTags, setSelectedTags] = useState([]);
 	const [selectedUsers, setSelectedUsers] = useState([]);
-	const [fromAd, setFromAd] = useState(false);
 
 	useEffect(() => {
 		if (user.profile.toUpperCase() === "ADMIN") {
@@ -616,21 +615,9 @@ const TicketsManagerTabs = () => {
 										<UsersFilter onFiltered={handleSelectedUsers} />
 									</>
 								)}
-
-								<Divider orientation="vertical" flexItem style={{ height: 20, alignSelf: "center" }} />
-								<Button
-									size="small"
-									variant={fromAd ? "contained" : "outlined"}
-									color={fromAd ? "primary" : "default"}
-									disableElevation
-									style={{ fontSize: "0.75rem", padding: "3px 10px", minHeight: 30, borderRadius: 16 }}
-									onClick={() => setFromAd((v) => !v)}
-								>
-									📢 Anúncios
-								</Button>
 							</div>
 
-							{(selectedTags.length > 0 || selectedUsers.length > 0 || fromAd) && (
+							{(selectedTags.length > 0 || selectedUsers.length > 0) && (
 								<>
 									<Divider orientation="vertical" flexItem style={{ height: 20, alignSelf: "center" }} />
 									<Button
@@ -639,7 +626,6 @@ const TicketsManagerTabs = () => {
 										onClick={() => {
 											setSelectedTags([]);
 											setSelectedUsers([]);
-											setFromAd(false);
 										}}
 									>
 										Limpar
@@ -652,7 +638,6 @@ const TicketsManagerTabs = () => {
 							showAll={true}
 							tags={selectedTags}
 							users={selectedUsers}
-							fromAd={fromAd}
 							selectedQueueIds={selectedQueueIds}
 						/>
 					</TabPanel>

@@ -26,7 +26,6 @@ import CreateMessageService from "../MessageServices/CreateMessageService";
 import { logger } from "../../utils/logger";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
-import { sendCAPIEvent, getCAPIRules } from "../MetaCAPIService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
 import formatBody from "../../helpers/Mustache";
@@ -2340,37 +2339,6 @@ const handleMessage = async (
       companyId,
       groupContact
     );
-
-    // Captura dados de anúncio Click-to-WhatsApp (CTWA) na primeira mensagem do ticket
-    if (!msg.key.fromMe && !ticket.ctwaClid) {
-      const msgContent = msg.message;
-      const externalAdReply =
-        msgContent?.extendedTextMessage?.contextInfo?.externalAdReply ||
-        msgContent?.imageMessage?.contextInfo?.externalAdReply ||
-        msgContent?.videoMessage?.contextInfo?.externalAdReply ||
-        msgContent?.documentMessage?.contextInfo?.externalAdReply;
-
-      if (externalAdReply?.ctwaClid) {
-        await ticket.update({
-          ctwaClid: externalAdReply.ctwaClid,
-          adSourceId: externalAdReply.sourceId || null,
-          adSourceUrl: externalAdReply.sourceUrl || null,
-          adTitle: externalAdReply.title || externalAdReply.body || null
-        });
-
-        getCAPIRules(companyId).then(rules => {
-          if (rules.leadOnNewFromAd) {
-            sendCAPIEvent({
-              ctwaClid: externalAdReply.ctwaClid,
-              phoneNumber: contact.number,
-              companyId,
-              ticketId: ticket.id,
-              eventName: "Lead"
-            }).catch(e => console.error("[MetaCAPI] Erro ao enviar Lead:", e));
-          }
-        }).catch(() => {});
-      }
-    }
 
     await provider(ticket, msg, companyId, contact, wbot as WASocket);
 

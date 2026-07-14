@@ -42,10 +42,6 @@ import { FlowBuilderModel } from "../models/FlowBuilder";
 import { FlowAudioModel } from "../models/FlowAudio";
 import { FlowCampaignModel } from "../models/FlowCampaign";
 import { FlowImgModel } from "../models/FlowImg";
-import CAPIEvent from "../models/CAPIEvent";
-import FollowUp from "../models/FollowUp";
-import FollowUpSchedule from "../models/FollowUpSchedule";
-import WhitelabelConfig from "../models/WhitelabelConfig";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -97,10 +93,6 @@ const models = [
   FlowAudioModel,
   FlowCampaignModel,
   FlowImgModel,
-  CAPIEvent,
-  FollowUp,
-  FollowUpSchedule,
-  WhitelabelConfig,
 ];
 
 sequelize.addModels(models);

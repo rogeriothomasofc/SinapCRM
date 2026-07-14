@@ -19,7 +19,6 @@ import Whatsapp from "../../models/Whatsapp";
 import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
-import { sendCAPIEvent, getCAPIRules } from "../MetaCAPIService";
 
 interface TicketData {
   status?: string;
@@ -162,20 +161,6 @@ const UpdateTicketService = async ({
       ticketTraking.finishedAt = moment().toDate();
       ticketTraking.whatsappId = ticket.whatsappId;
       ticketTraking.userId = ticket.userId;
-
-      if (ticket.ctwaClid) {
-        getCAPIRules(companyId).then(rules => {
-          if (rules.completeOnClose) {
-            sendCAPIEvent({
-              ctwaClid: ticket.ctwaClid,
-              phoneNumber: ticket.contact?.number,
-              companyId,
-              ticketId: ticket.id,
-              eventName: rules.eventOnClose
-            }).catch(e => console.error("[MetaCAPI] Erro ao enviar evento de conclusão:", e));
-          }
-        }).catch(() => {});
-      }
 
       /*    queueId = null;
             userId = null; */

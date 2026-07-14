@@ -25,7 +25,6 @@ interface Request {
   tags: number[];
   users: number[];
   companyId: number;
-  fromAd?: boolean;
 }
 
 interface Response {
@@ -46,8 +45,7 @@ const ListTicketsService = async ({
   showAll,
   userId,
   withUnreadMessages,
-  companyId,
-  fromAd
+  companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
     [Op.or]: [{ userId }, { status: "pending" }],
@@ -211,13 +209,6 @@ const ListTicketsService = async ({
 
   const limit = 40;
   const offset = limit * (+pageNumber - 1);
-
-  if (fromAd) {
-    whereCondition = {
-      ...whereCondition,
-      ctwaClid: { [Op.ne]: null }
-    };
-  }
 
   whereCondition = {
     ...whereCondition,

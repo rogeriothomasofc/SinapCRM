@@ -2,10 +2,6 @@ import React, { useState, useEffect } from "react";
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import brLocale from "date-fns/locale/pt-BR";
-import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { format as fnsFormat, parse as fnsParse, isValid } from "date-fns";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
@@ -85,9 +81,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     timeUseBotQueues: 0,
     maxUseBotQueues: 3,
     integration: null,
-    importMessages: false,
-    importOldMessages: "",
-    importRecentMessages: "",
   };
 
   const [whatsApp, setWhatsApp] = useState(initialState);
@@ -478,66 +471,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       margin="dense"
                     />
                   </div>
-                </div>
-                {/* IMPORTAÇÃO DE MENSAGENS */}
-                <div>
-                  <h3>Importar Mensagens</h3>
-                  <p style={{ marginTop: 0, color: "rgba(0,0,0,0.54)", fontSize: 14 }}>
-                    Ao conectar (novo QR Code), importa automaticamente o histórico de mensagens do período selecionado.
-                  </p>
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12}>
-                      <FormControlLabel
-                        control={
-                          <Field
-                            as={Switch}
-                            color="primary"
-                            name="importMessages"
-                            checked={!!values.importMessages}
-                          />
-                        }
-                        label="Importar mensagens ao conectar"
-                      />
-                    </Grid>
-                    {values.importMessages && (
-                      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={brLocale}>
-                        <Grid item xs={12} sm={6}>
-                          <DateTimePicker
-                            label="Data inicial"
-                            value={
-                              values.importOldMessages
-                                ? (() => { const d = fnsParse(values.importOldMessages, "dd/MM/yyyy HH:mm", new Date()); return isValid(d) ? d : null; })()
-                                : null
-                            }
-                            onChange={(newValue) => {
-                              setFieldValue("importOldMessages", newValue && isValid(newValue) ? fnsFormat(newValue, "dd/MM/yyyy HH:mm") : "");
-                            }}
-                            ampm={false}
-                            renderInput={(params) => (
-                              <TextField {...params} fullWidth variant="outlined" margin="dense" />
-                            )}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <DateTimePicker
-                            label="Data final"
-                            value={
-                              values.importRecentMessages
-                                ? (() => { const d = fnsParse(values.importRecentMessages, "dd/MM/yyyy HH:mm", new Date()); return isValid(d) ? d : null; })()
-                                : null
-                            }
-                            onChange={(newValue) => {
-                              setFieldValue("importRecentMessages", newValue && isValid(newValue) ? fnsFormat(newValue, "dd/MM/yyyy HH:mm") : "");
-                            }}
-                            ampm={false}
-                            renderInput={(params) => (
-                              <TextField {...params} fullWidth variant="outlined" margin="dense" />
-                            )}
-                          />
-                        </Grid>
-                      </LocalizationProvider>
-                    )}
-                  </Grid>
                 </div>
               </DialogContent>
               <DialogActions>

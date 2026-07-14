@@ -3,7 +3,6 @@ import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import User from "../../models/User";
 import Setting from "../../models/Setting";
-import Plan from "../../models/Plan";
 import { hash } from "bcryptjs";
 
 interface CompanyData {
@@ -67,9 +66,6 @@ const CreateCompanyService = async (
     throw new AppError(err.message);
   }
 
-  const plan = planId ? await Plan.findByPk(planId) : null;
-  const planRecurrence = plan?.recurrence || recurrence || "MENSAL";
-
   const company = await Company.create({
     name,
     phone,
@@ -77,7 +73,7 @@ const CreateCompanyService = async (
     status: status !== undefined ? status : true,
     planId,
     dueDate,
-    recurrence: planRecurrence
+    recurrence: recurrence || "MENSAL"
   });
 
   const existingUser = await User.findOne({ where: { email: company.email } });

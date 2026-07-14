@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Container,
@@ -27,9 +27,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
-  Tab,
-  Tooltip as MuiTooltip,
 } from "@material-ui/core";
 
 // Ícones
@@ -72,7 +69,6 @@ import moment from "moment";
 
 import LinearProgress from '@material-ui/core/LinearProgress';
 import StarIcon from '@material-ui/icons/Star';
-import { CheckCircleOutline, AssignmentTurnedIn, Refresh, ErrorOutline } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
@@ -315,88 +311,7 @@ const useStyles = makeStyles((theme) => ({
       },
     },
   },
-  tabsBar: {
-    marginBottom: theme.spacing(2),
-    borderBottom: `1px solid ${theme.palette.divider}`,
-  },
-  trackStatCard: {
-    padding: theme.spacing(2.5),
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(2),
-    borderRadius: 8,
-  },
-  trackStatIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  trackStatValue: {
-    fontSize: "2rem",
-    fontWeight: 700,
-    lineHeight: 1,
-  },
-  trackStatLabel: {
-    fontSize: "0.82rem",
-    color: theme.palette.text.secondary,
-    marginTop: 2,
-  },
-  trackSectionTitle: {
-    fontWeight: 600,
-    marginBottom: theme.spacing(1),
-    marginTop: theme.spacing(2),
-    fontSize: "0.95rem",
-  },
-  trackTableContainer: { borderRadius: 8 },
-  trackAdRow: {
-    "&:hover": { backgroundColor: theme.palette.action.hover },
-  },
-  trackStatusChip: {
-    fontSize: "0.7rem",
-    height: 22,
-    fontWeight: 600,
-  },
-  trackFailedRow: {
-    backgroundColor: theme.palette.type === "dark" ? "#2a1a1a" : "#fff5f5",
-    "&:hover": { backgroundColor: theme.palette.type === "dark" ? "#331a1a" : "#ffe8e8" },
-  },
 }));
-
-const trackStatusLabels = {
-  open: { label: "Aberto", color: "#2563eb" },
-  pending: { label: "Aguardando", color: "#f59e0b" },
-  closed: { label: "Concluído", color: "#10b981" },
-};
-
-const trackEventNames = {
-  Lead: "Lead capturado",
-  CompleteRegistration: "Atendimento concluído",
-  Purchase: "Venda",
-};
-
-const ERROR_DIAGNOSES = {
-  ctwa_clid_expired: { label: "Click ID expirado", fix: "O ctwa_clid expira em 7 dias. Não é possível reenviar.", canRetry: false },
-  invalid_token: { label: "Token inválido", fix: "Atualize o token em Configurações → Meta CAPI.", canRetry: true },
-  no_waba_linked: { label: "WABA não vinculado", fix: "Vincule o WhatsApp Business ao pixel em Meta Events Manager.", canRetry: true },
-  pixel_not_found: { label: "Pixel não encontrado", fix: "Verifique o Pixel ID em Configurações → Meta CAPI.", canRetry: true },
-  permission_denied: { label: "Sem permissão", fix: "O token precisa da permissão ads_management.", canRetry: true },
-  unknown: { label: "Erro desconhecido", fix: "Verifique as credenciais do Meta CAPI em Configurações.", canRetry: true },
-};
-
-function diagnoseMsgCode(errorMessage) {
-  if (!errorMessage) return null;
-  const msg = errorMessage.toLowerCase();
-  if (msg.includes("ctwa_clid") || msg.includes("ctwaclid")) return "ctwa_clid_expired";
-  if ((msg.includes("invalid") || msg.includes("expired")) && (msg.includes("token") || msg.includes("access"))) return "invalid_token";
-  if (msg.includes("waba") || msg.includes("whatsapp_business_account")) return "no_waba_linked";
-  if (msg.includes("pixel") || msg.includes("dataset") || msg.includes('"code":190')) return "pixel_not_found";
-  if (msg.includes("permission") || msg.includes("403")) return "permission_denied";
-  return "unknown";
-}
 
 const Dashboard = () => {
   const classes = useStyles();
@@ -413,46 +328,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const { find } = useDashboard();
-
-  const [activeTab, setActiveTab] = useState(0);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [trackStartDate, setTrackStartDate] = useState(thirtyDaysAgo);
-  const [trackEndDate, setTrackEndDate] = useState(today);
-  const [trackLoading, setTrackLoading] = useState(false);
-  const [trackStats, setTrackStats] = useState(null);
-  const [retrying, setRetrying] = useState({});
-
-  const fetchStats = useCallback(async () => {
-    setTrackLoading(true);
-    try {
-      const { data } = await api.get("/ad-tracking/stats", { params: { startDate: trackStartDate, endDate: trackEndDate } });
-      setTrackStats(data);
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setTrackLoading(false);
-    }
-  }, [trackStartDate, trackEndDate]);
-
-  useEffect(() => {
-    if (activeTab === 1 && !trackStats) fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
-  const handleRetry = async (eventId) => {
-    setRetrying(r => ({ ...r, [eventId]: true }));
-    try {
-      await api.post(`/ad-tracking/capi-events/${eventId}/retry`);
-      toast.success("Evento reenviado com sucesso!");
-      fetchStats();
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setRetrying(r => ({ ...r, [eventId]: false }));
-    }
-  };
 
   useEffect(() => {
     async function firstLoad() {
@@ -726,14 +601,6 @@ const Dashboard = () => {
   return (
     <Box className={classes.root}>
       <Container maxWidth="lg" className={classes.container}>
-        <Box className={classes.tabsBar}>
-          <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} indicatorColor="primary" textColor="primary">
-            <Tab label="Dashboard" />
-            <Tab label="Rastreamento de Anúncios" />
-          </Tabs>
-        </Box>
-
-        {activeTab === 0 && (<>
         {/* Header Compacto */}
         <Box className={classes.pageHeader}>
           <Typography className={classes.pageTitle}>
@@ -1175,229 +1042,11 @@ const Dashboard = () => {
 
           </>
         )}
-        </>)}
 
-        {activeTab === 1 && (
-          <>
-            <Box display="flex" alignItems="center" style={{ gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-              <TextField
-                label="Data inicial"
-                type="date"
-                value={trackStartDate}
-                onChange={(e) => setTrackStartDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-                variant="outlined"
-              />
-              <TextField
-                label="Data final"
-                type="date"
-                value={trackEndDate}
-                onChange={(e) => setTrackEndDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                size="small"
-                variant="outlined"
-              />
-              <Button variant="contained" color="primary" onClick={fetchStats} disabled={trackLoading} disableElevation>
-                {trackLoading ? <CircularProgress size={18} color="inherit" /> : "Filtrar"}
-              </Button>
-            </Box>
-
-            {trackLoading && !trackStats && (
-              <Box display="flex" justifyContent="center" style={{ padding: "48px 0" }}>
-                <CircularProgress />
-              </Box>
-            )}
-
-            {trackStats && (
-              <>
-                <Grid container spacing={2} style={{ marginBottom: 8 }}>
-                  <Grid item xs={12} sm={4}>
-                    <Paper className={classes.trackStatCard} elevation={1}>
-                      <Box className={classes.trackStatIcon} style={{ backgroundColor: "#eff6ff" }}>
-                        <TrendingUpIcon style={{ color: "#2563eb" }} />
-                      </Box>
-                      <div>
-                        <div className={classes.trackStatValue}>{trackStats.total}</div>
-                        <div className={classes.trackStatLabel}>Atendimentos de anúncios</div>
-                      </div>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Paper className={classes.trackStatCard} elevation={1}>
-                      <Box className={classes.trackStatIcon} style={{ backgroundColor: "#f0fdf4" }}>
-                        <CheckCircleOutline style={{ color: "#10b981" }} />
-                      </Box>
-                      <div>
-                        <div className={classes.trackStatValue}>{trackStats.closed}</div>
-                        <div className={classes.trackStatLabel}>Atendimentos concluídos</div>
-                      </div>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Paper className={classes.trackStatCard} elevation={1}>
-                      <Box className={classes.trackStatIcon} style={{ backgroundColor: "#fff7ed" }}>
-                        <AssignmentTurnedIn style={{ color: "#f59e0b" }} />
-                      </Box>
-                      <div>
-                        <div className={classes.trackStatValue}>{trackStats.conversionRate}%</div>
-                        <div className={classes.trackStatLabel}>Taxa de conversão</div>
-                      </div>
-                    </Paper>
-                  </Grid>
-                </Grid>
-
-                {trackStats.failedEvents && trackStats.failedEvents.length > 0 && (
-                  <>
-                    <Typography className={classes.trackSectionTitle} style={{ color: "#dc2626" }}>
-                      ⚠ Eventos CAPI com falha ({trackStats.failedEvents.length})
-                    </Typography>
-                    <TableContainer component={Paper} className={classes.trackTableContainer} elevation={1}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Evento</strong></TableCell>
-                            <TableCell><strong>Atendimento #</strong></TableCell>
-                            <TableCell><strong>Diagnóstico</strong></TableCell>
-                            <TableCell><strong>Data</strong></TableCell>
-                            <TableCell align="center"><strong>Reenviar</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {trackStats.failedEvents.map((ev) => {
-                            const diagCode = diagnoseMsgCode(ev.errorMessage);
-                            const diag = ERROR_DIAGNOSES[diagCode] || ERROR_DIAGNOSES.unknown;
-                            return (
-                              <TableRow key={ev.id} className={classes.trackFailedRow}>
-                                <TableCell>{trackEventNames[ev.eventName] || ev.eventName}</TableCell>
-                                <TableCell>#{ev.ticketId}</TableCell>
-                                <TableCell>
-                                  <MuiTooltip title={diag.fix} arrow>
-                                    <span style={{ display: "flex", alignItems: "center", gap: 4, cursor: "help" }}>
-                                      <ErrorOutline style={{ fontSize: 14, color: "#dc2626" }} />
-                                      <span style={{ fontSize: "0.75rem", color: "#dc2626" }}>{diag.label}</span>
-                                    </span>
-                                  </MuiTooltip>
-                                </TableCell>
-                                <TableCell style={{ fontSize: "0.75rem" }}>
-                                  {new Date(ev.createdAt).toLocaleDateString("pt-BR")}
-                                </TableCell>
-                                <TableCell align="center">
-                                  <MuiTooltip title={diag.canRetry ? "Reenviar este evento ao Meta CAPI" : diag.fix} arrow>
-                                    <span>
-                                      <IconButton
-                                        size="small"
-                                        disabled={!diag.canRetry || retrying[ev.id]}
-                                        onClick={() => handleRetry(ev.id)}
-                                        style={{ color: diag.canRetry ? "#2563eb" : "#ccc" }}
-                                      >
-                                        {retrying[ev.id] ? <CircularProgress size={14} /> : <Refresh fontSize="small" />}
-                                      </IconButton>
-                                    </span>
-                                  </MuiTooltip>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </>
-                )}
-
-                {trackStats.byAd && trackStats.byAd.length > 0 && (
-                  <>
-                    <Typography className={classes.trackSectionTitle}>Performance por anúncio</Typography>
-                    <TableContainer component={Paper} className={classes.trackTableContainer} elevation={1}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Anúncio</strong></TableCell>
-                            <TableCell align="center"><strong>Atendimentos</strong></TableCell>
-                            <TableCell align="center"><strong>Concluídos</strong></TableCell>
-                            <TableCell align="center"><strong>Conversão</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {trackStats.byAd.map((ad, i) => (
-                            <TableRow key={i} className={classes.trackAdRow}>
-                              <TableCell>{ad.title}</TableCell>
-                              <TableCell align="center">{ad.count}</TableCell>
-                              <TableCell align="center">{ad.closed}</TableCell>
-                              <TableCell align="center">
-                                {ad.count > 0 ? ((ad.closed / ad.count) * 100).toFixed(0) + "%" : "—"}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </>
-                )}
-
-                {trackStats.tickets && trackStats.tickets.length > 0 && (
-                  <>
-                    <Typography className={classes.trackSectionTitle} style={{ marginTop: 20 }}>
-                      Últimos atendimentos de anúncios
-                    </Typography>
-                    <TableContainer component={Paper} className={classes.trackTableContainer} elevation={1}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>#</strong></TableCell>
-                            <TableCell><strong>Contato</strong></TableCell>
-                            <TableCell><strong>Anúncio</strong></TableCell>
-                            <TableCell align="center"><strong>Status</strong></TableCell>
-                            <TableCell><strong>Data</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {trackStats.tickets.map((t) => {
-                            const s = trackStatusLabels[t.status] || { label: t.status, color: "#666" };
-                            return (
-                              <TableRow key={t.id} className={classes.trackAdRow}>
-                                <TableCell>{t.id}</TableCell>
-                                <TableCell>
-                                  {t.contact?.name || "—"}
-                                  {t.contact?.number && (
-                                    <div style={{ fontSize: "0.7rem", color: "#888" }}>{t.contact.number}</div>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {t.adTitle || <span style={{ color: "#aaa" }}>sem título</span>}
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Chip
-                                    label={s.label}
-                                    className={classes.trackStatusChip}
-                                    style={{ backgroundColor: s.color + "20", color: s.color }}
-                                  />
-                                </TableCell>
-                                <TableCell>{new Date(t.createdAt).toLocaleDateString("pt-BR")}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </>
-                )}
-
-                {trackStats.total === 0 && (
-                  <Box style={{ textAlign: "center", padding: 48, color: "#aaa" }}>
-                    <Typography variant="h6">Nenhum atendimento de anúncio encontrado</Typography>
-                    <Typography variant="body2" style={{ marginTop: 8 }}>
-                      Quando clientes vierem por anúncios do WhatsApp, aparecerão aqui.
-                    </Typography>
-                  </Box>
-                )}
-              </>
-            )}
-          </>
-        )}
       </Container>
     </Box>
   );
 };
 
 export default Dashboard;
+

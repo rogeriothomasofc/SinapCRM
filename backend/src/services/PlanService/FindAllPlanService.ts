@@ -1,8 +1,7 @@
 import Plan from "../../models/Plan";
 
-const FindAllPlanService = async (publicOnly = false): Promise<Plan[]> => {
-  const where = publicOnly ? { isPublic: true } : {};
-  const plan = await Plan.findAll({ where, order: [["name", "ASC"]] });
+const FindAllPlanService = async (): Promise<Plan[]> => {
+  const plan = await Plan.findAll({ order: [["name", "ASC"]] });
   return plan;
 };
 

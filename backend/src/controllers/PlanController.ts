@@ -65,7 +65,7 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const listPublic = async (req: Request, res: Response): Promise<Response> => {
-  const plans: Plan[] = await FindAllPlanService(true);
+  const plans: Plan[] = await FindAllPlanService();
   return res.status(200).json(plans);
 };
 

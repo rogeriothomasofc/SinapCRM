@@ -8,22 +8,10 @@ import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { useMediaQuery } from "@material-ui/core";
 import ColorModeContext from "./layout/themeContext";
 import { SocketContext, SocketManager } from './context/Socket/SocketContext';
-import { WhitelabelProvider } from "./context/Whitelabel/WhitelabelContext";
 
 import Routes from "./routes";
 
 const queryClient = new QueryClient();
-
-const getWlColor = (key, fallback) => {
-    try {
-        const stored = localStorage.getItem("wl_config");
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            return parsed[key] || fallback;
-        }
-    } catch {}
-    return fallback;
-};
 
 const App = () => {
     const [locale, setLocale] = useState();
@@ -32,8 +20,8 @@ const App = () => {
     const preferredTheme = window.localStorage.getItem("preferredTheme");
     const [mode, setMode] = useState(preferredTheme ? preferredTheme : prefersDarkMode ? "dark" : "light");
 
-    const [primaryColor, setPrimaryColor] = useState(() => getWlColor("primaryColor", "#682EE3"));
-    const [secondaryColor, setSecondaryColor] = useState(() => getWlColor("secondaryColor", "#ff5722"));
+    const primaryColor = "#682EE3";
+    const secondaryColor = "#ff5722";
 
     const colorMode = React.useMemo(
         () => ({
@@ -43,15 +31,6 @@ const App = () => {
         }),
         []
     );
-
-    useEffect(() => {
-        const handler = (e) => {
-            if (e.detail?.primaryColor) setPrimaryColor(e.detail.primaryColor);
-            if (e.detail?.secondaryColor) setSecondaryColor(e.detail.secondaryColor);
-        };
-        window.addEventListener("whitelabel:updated", handler);
-        return () => window.removeEventListener("whitelabel:updated", handler);
-    }, []);
 
     const theme = useMemo(() => createTheme(
         {
@@ -127,17 +106,15 @@ const App = () => {
     }, [mode]);
 
     return (
-        <WhitelabelProvider>
-            <ColorModeContext.Provider value={{ colorMode }}>
-                <ThemeProvider theme={theme}>
-                    <QueryClientProvider client={queryClient}>
-                      <SocketContext.Provider value={SocketManager}>
-                          <Routes />
-                      </SocketContext.Provider>
-                    </QueryClientProvider>
-                </ThemeProvider>
-            </ColorModeContext.Provider>
-        </WhitelabelProvider>
+        <ColorModeContext.Provider value={{ colorMode }}>
+            <ThemeProvider theme={theme}>
+                <QueryClientProvider client={queryClient}>
+                  <SocketContext.Provider value={SocketManager}>
+                      <Routes />
+                  </SocketContext.Provider>
+                </QueryClientProvider>
+            </ThemeProvider>
+        </ColorModeContext.Provider>
     );
 };
 

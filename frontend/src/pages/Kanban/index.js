@@ -290,11 +290,9 @@ const KanbanCard = ({ ticket, onView, classes }) => {
   const noName = ticket.contact.name === ticket.contact.number;
   const displayName = group
     ? (noName ? `Grupo ${ticket.contact.number.slice(-6)}` : ticket.contact.name)
-    : ticket.contact.businessName && ticket.contact.businessName !== ticket.contact.name
-      ? ticket.contact.businessName
-      : noName
-        ? formatPhone(ticket.contact.number) || ticket.contact.number
-        : ticket.contact.name;
+    : noName
+      ? formatPhone(ticket.contact.number) || ticket.contact.number
+      : ticket.contact.name;
 
   // Subtítulo: para grupos mostra "Grupo" + nome do contato se tiver; para pessoas mostra o número formatado
   const subtitle = group

@@ -21,7 +21,6 @@ type IndexQuery = {
   queueIds: string;
   tags: string;
   users: string;
-  fromAd?: string;
 };
 
 interface TicketData {
@@ -46,8 +45,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds: queueIdsStringified,
     tags: tagIdsStringified,
     users: userIdsStringified,
-    withUnreadMessages,
-    fromAd
+    withUnreadMessages
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
@@ -81,8 +79,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     userId,
     queueIds,
     withUnreadMessages,
-    companyId,
-    fromAd: fromAd === "true",
+    companyId
   });
   return res.status(200).json({ tickets, count, hasMore });
 };

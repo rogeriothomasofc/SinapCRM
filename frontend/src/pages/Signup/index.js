@@ -245,10 +245,6 @@ const UserSchema = Yup.object().shape({
     .required(i18n.t("signup.formErrors.plan.required") || "Selecione um plano"),
 });
 
-const RECURRENCE_LABEL = {
-  MENSAL: "Mensal", TRIMESTRAL: "Trimestral", SEMESTRAL: "Semestral", ANUAL: "Anual"
-};
-
 const PlanPickerModal = ({ open, plans, selectedId, onSelect, onClose }) => {
   const classes = useStyles();
   const fmt = (v) => Number(v).toFixed(2).replace(".", ",");
@@ -267,7 +263,6 @@ const PlanPickerModal = ({ open, plans, selectedId, onSelect, onClose }) => {
         <div className={classes.plansGrid}>
           {plans.map(plan => {
             const isSelected = String(selectedId) === String(plan.id);
-            const recLabel = RECURRENCE_LABEL[plan.recurrence] || "Mensal";
 
             return (
               <div
@@ -280,7 +275,7 @@ const PlanPickerModal = ({ open, plans, selectedId, onSelect, onClose }) => {
                   R$ {fmt(plan.value)}
                 </Typography>
                 <Typography className={classes.planPriceLabel}>
-                  cobrado {recLabel.toLowerCase()}
+                  cobrado mensalmente
                 </Typography>
 
                 <div className={classes.planFeatures}>
@@ -334,7 +329,7 @@ const SignUp = () => {
   const dueDate = moment().add(3, "day").format();
 
   const handleSignUp = async values => {
-    Object.assign(values, { recurrence: selectedPlan?.recurrence || "MENSAL" });
+    Object.assign(values, { recurrence: "MENSAL" });
     Object.assign(values, { dueDate: dueDate });
     Object.assign(values, { status: "t" });
     Object.assign(values, { campaignsEnabled: true });
@@ -526,7 +521,7 @@ const SignUp = () => {
                         <span>
                           {selectedPlan.name}
                           <Chip
-                            label={`R$ ${Number(selectedPlan.value).toFixed(2).replace(".", ",")} · ${RECURRENCE_LABEL[selectedPlan.recurrence] || "Mensal"}`}
+                            label={`R$ ${Number(selectedPlan.value).toFixed(2).replace(".", ",")} · Mensal`}
                             size="small"
                             color="primary"
                             className={classes.selectedChip}

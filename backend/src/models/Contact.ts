@@ -51,30 +51,6 @@ class Contact extends Model<Contact> {
   @Column
   disableBot: boolean;
 
-  @AllowNull(true)
-  @Column
-  cpf: string;
-
-  @AllowNull(true)
-  @Column
-  birthDate: string;
-
-  @AllowNull(true)
-  @Column
-  businessName: string;
-
-  @AllowNull(true)
-  @Column
-  cep: string;
-
-  @AllowNull(true)
-  @Column
-  cidade: string;
-
-  @AllowNull(true)
-  @Column
-  estado: string;
-
   @CreatedAt
   createdAt: Date;
 

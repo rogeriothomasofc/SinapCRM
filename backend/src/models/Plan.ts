@@ -60,12 +60,6 @@ class Plan extends Model<Plan> {
 
   @Column
   useIntegrations: boolean;
-
-  @Column({ defaultValue: true })
-  isPublic: boolean;
-
-  @Column({ defaultValue: "MENSAL" })
-  recurrence: string;
 }
 
 export default Plan;

@@ -53,7 +53,6 @@ import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
 import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
-import { useWhitelabel } from "../context/Whitelabel/WhitelabelContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
 import { useDate } from "../hooks/useDate";
@@ -302,9 +301,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const { logoUrl, name: wlName } = useWhitelabel();
-  const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
-  const resolvedLogo = logoUrl ? `${backendUrl}${logoUrl}` : logo;
   const { colorMode } = useContext(ColorModeContext);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
@@ -432,7 +428,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img src={resolvedLogo} className={classes.logo} alt={wlName || "logo"} />
+          <img src={logo} className={classes.logo} alt="logo" />
         </div>
         
         <div className={classes.listWrapper}>

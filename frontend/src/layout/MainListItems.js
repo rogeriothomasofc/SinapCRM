@@ -25,7 +25,6 @@ import ForumOutlinedIcon from "@material-ui/icons/ForumOutlined";
 import ViewComfyOutlinedIcon from '@material-ui/icons/ViewComfyOutlined';
 import ChatBubbleOutlineOutlinedIcon from '@material-ui/icons/ChatBubbleOutlineOutlined';
 import FlashOnOutlinedIcon from "@material-ui/icons/FlashOnOutlined";
-import RepeatOneOutlinedIcon from '@material-ui/icons/RepeatOne';
 
 import { i18n } from "../translate/i18n";
 import { AuthContext } from "../context/Auth/AuthContext";
@@ -489,10 +488,6 @@ const MainListItems = (props) => {
                         <ListItem button onClick={() => history.push("/flowbuilders")} className={classes.listItem}>
                           <ListItemIcon className={classes.listItemIcon}><AccountTreeOutlinedIcon /></ListItemIcon>
                           <ListItemText primary="Conversa" primaryTypographyProps={{ className: classes.listItemText }} />
-                        </ListItem>
-                        <ListItem button onClick={() => history.push("/followup")} className={classes.listItem}>
-                          <ListItemIcon className={classes.listItemIcon}><RepeatOneOutlinedIcon /></ListItemIcon>
-                          <ListItemText primary="Follow-up" primaryTypographyProps={{ className: classes.listItemText }} />
                         </ListItem>
                       </List>
                     </Collapse>

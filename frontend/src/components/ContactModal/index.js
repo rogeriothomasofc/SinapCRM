@@ -16,8 +16,6 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import SearchIcon from "@material-ui/icons/Search";
-import InputAdornment from "@material-ui/core/InputAdornment";
 import Grid from "@material-ui/core/Grid";
 
 import { i18n } from "../../translate/i18n";
@@ -70,18 +68,11 @@ const ContactSchema = Yup.object().shape({
 const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 	const classes = useStyles();
 	const isMounted = useRef(true);
-	const [cepLoading, setCepLoading] = useState(false);
 
 	const initialState = {
 		name: "",
 		number: "",
 		email: "",
-		cpf: "",
-		birthDate: "",
-		businessName: "",
-		cep: "",
-		cidade: "",
-		estado: "",
 	};
 
 	const [contact, setContact] = useState(initialState);
@@ -108,7 +99,6 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 					setContact({
 						...data,
 						number: data.number,
-						birthDate: data.birthDate ? data.birthDate.substring(0, 10) : "",
 					});
 				}
 			} catch (err) {
@@ -122,29 +112,6 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 	const handleClose = () => {
 		onClose();
 		setContact(initialState);
-	};
-
-	const handleCepSearch = async (cep, setFieldValue) => {
-		const cleaned = (cep || "").replace(/\D/g, "");
-		if (cleaned.length !== 8) {
-			toast.warning("Digite um CEP válido com 8 dígitos.");
-			return;
-		}
-		setCepLoading(true);
-		try {
-			const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
-			const data = await res.json();
-			if (data.erro) {
-				toast.error("CEP não encontrado.");
-				return;
-			}
-			setFieldValue("cidade", data.localidade || "");
-			setFieldValue("estado", data.uf || "");
-		} catch {
-			toast.error("Erro ao buscar CEP.");
-		} finally {
-			setCepLoading(false);
-		}
 	};
 
 	const handleSaveContact = async values => {
@@ -184,7 +151,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 						}, 400);
 					}}
 				>
-					{({ values, errors, touched, isSubmitting, setFieldValue }) => (
+					{({ values, errors, touched, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
 								{/* Dados principais */}
@@ -227,90 +194,6 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 											variant="outlined"
 											margin="dense"
 											fullWidth
-										/>
-									</Grid>
-									<Grid item xs={12} sm={6}>
-										<Field
-											as={TextField}
-											label="Empresa / Loja"
-											name="businessName"
-											variant="outlined"
-											margin="dense"
-											fullWidth
-										/>
-									</Grid>
-									<Grid item xs={12} sm={6}>
-										<Field
-											as={TextField}
-											label="CPF / CNPJ"
-											name="cpf"
-											variant="outlined"
-											margin="dense"
-											fullWidth
-										/>
-									</Grid>
-									<Grid item xs={12} sm={6}>
-										<Field
-											as={TextField}
-											label="Data de nascimento"
-											name="birthDate"
-											type="date"
-											InputLabelProps={{ shrink: true }}
-											variant="outlined"
-											margin="dense"
-											fullWidth
-										/>
-									</Grid>
-								</Grid>
-
-								{/* Endereço */}
-								<Typography variant="subtitle1" className={classes.sectionTitle}>
-									Endereço
-								</Typography>
-								<Grid container spacing={1}>
-									<Grid item xs={12} sm={4}>
-										<Field
-											as={TextField}
-											label="CEP"
-											name="cep"
-											variant="outlined"
-											margin="dense"
-											fullWidth
-											inputProps={{ maxLength: 9 }}
-											InputProps={{
-												endAdornment: (
-													<InputAdornment position="end">
-														<IconButton
-															size="small"
-															disabled={cepLoading}
-															onClick={() => handleCepSearch(values.cep, setFieldValue)}
-														>
-															{cepLoading ? <CircularProgress size={16} /> : <SearchIcon fontSize="small" />}
-														</IconButton>
-													</InputAdornment>
-												),
-											}}
-										/>
-									</Grid>
-									<Grid item xs={12} sm={6}>
-										<Field
-											as={TextField}
-											label="Cidade"
-											name="cidade"
-											variant="outlined"
-											margin="dense"
-											fullWidth
-										/>
-									</Grid>
-									<Grid item xs={12} sm={2}>
-										<Field
-											as={TextField}
-											label="UF"
-											name="estado"
-											variant="outlined"
-											margin="dense"
-											fullWidth
-											inputProps={{ maxLength: 2 }}
 										/>
 									</Grid>
 								</Grid>

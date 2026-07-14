@@ -29,8 +29,6 @@ import {
     Cancel as CancelIcon,
     LocalOffer as PlanIcon,
     ViewList as ListIcon,
-    Visibility as VisibleIcon,
-    VisibilityOff as HiddenIcon,
 } from "@material-ui/icons";
 
 import { toast } from "react-toastify";
@@ -170,7 +168,6 @@ export function PlanManagerForm(props) {
         connections: 0,
         queues: 0,
         value: 0,
-        recurrence: 'MENSAL',
         useCampaigns: true,
         useSchedules: true,
         useInternalChat: true,
@@ -178,7 +175,6 @@ export function PlanManagerForm(props) {
         useKanban: true,
         useOpenAi: true,
         useIntegrations: true,
-        isPublic: true,
     });
 
     useEffect(() => {
@@ -363,34 +359,6 @@ export function PlanManagerForm(props) {
                                     </Field>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
-                                <FormControl variant="outlined" fullWidth size="small" className={classes.select}>
-                                    <InputLabel>Recorrência</InputLabel>
-                                    <Field
-                                        as={Select}
-                                        label="Recorrência"
-                                        name="recurrence"
-                                    >
-                                        <MenuItem value="MENSAL">Mensal</MenuItem>
-                                        <MenuItem value="TRIMESTRAL">Trimestral</MenuItem>
-                                        <MenuItem value="SEMESTRAL">Semestral</MenuItem>
-                                        <MenuItem value="ANUAL">Anual</MenuItem>
-                                    </Field>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
-                                <FormControl variant="outlined" fullWidth size="small" className={classes.select}>
-                                    <InputLabel>Visível no cadastro</InputLabel>
-                                    <Field
-                                        as={Select}
-                                        label="Visível no cadastro"
-                                        name="isPublic"
-                                    >
-                                        <MenuItem value={true}>Sim — aparece no signup</MenuItem>
-                                        <MenuItem value={false}>Não — oculto</MenuItem>
-                                    </Field>
-                                </FormControl>
-                            </Grid>
                         </Grid>
 
                         <Box className={classes.buttonContainer}>
@@ -458,8 +426,6 @@ export function PlansManagerGrid(props) {
                         <TableCell align="center">{i18n.t("plans.form.kanban")}</TableCell>
                         <TableCell align="center">Open.AI</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.integrations")}</TableCell>
-                        <TableCell align="center">Recorrência</TableCell>
-                        <TableCell align="center">Visível</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -492,16 +458,6 @@ export function PlansManagerGrid(props) {
                             <TableCell align="center">{renderFeatureIcon(row.useKanban)}</TableCell>
                             <TableCell align="center">{renderFeatureIcon(row.useOpenAi)}</TableCell>
                             <TableCell align="center">{renderFeatureIcon(row.useIntegrations)}</TableCell>
-                            <TableCell align="center">
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#666" }}>
-                                    {row.recurrence || "MENSAL"}
-                                </span>
-                            </TableCell>
-                            <TableCell align="center">
-                                {row.isPublic !== false
-                                    ? <VisibleIcon style={{ fontSize: 20, color: "#4caf50" }} />
-                                    : <HiddenIcon style={{ fontSize: 20, color: "#9e9e9e" }} />}
-                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -592,7 +548,6 @@ export default function PlansManager() {
             connections: 0,
             queues: 0,
             value: 0,
-            recurrence: 'MENSAL',
             useCampaigns: true,
             useSchedules: true,
             useInternalChat: true,
@@ -600,7 +555,6 @@ export default function PlansManager() {
             useKanban: true,
             useOpenAi: true,
             useIntegrations: true,
-            isPublic: true,
         });
     };
 
@@ -612,7 +566,6 @@ export default function PlansManager() {
             connections: data.connections || 0,
             queues: data.queues || 0,
             value: data.value?.toLocaleString('pt-br', { minimumFractionDigits: 0 }) || 0,
-            recurrence: data.recurrence || 'MENSAL',
             useCampaigns: data.useCampaigns !== false,
             useSchedules: data.useSchedules !== false,
             useInternalChat: data.useInternalChat !== false,
@@ -620,7 +573,6 @@ export default function PlansManager() {
             useKanban: data.useKanban !== false,
             useOpenAi: data.useOpenAi !== false,
             useIntegrations: data.useIntegrations !== false,
-            isPublic: data.isPublic !== false,
         });
     };
 

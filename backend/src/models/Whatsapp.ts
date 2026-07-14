@@ -155,19 +155,6 @@ class Whatsapp extends Model<Whatsapp> {
 
   @BelongsTo(() => FlowBuilderModel)
   flowBuilder: FlowBuilderModel
-
-  @Default(false)
-  @AllowNull
-  @Column
-  importMessages: boolean;
-
-  @AllowNull
-  @Column(DataType.STRING)
-  importOldMessages: string;
-
-  @AllowNull
-  @Column(DataType.STRING)
-  importRecentMessages: string;
 }
 
 export default Whatsapp;

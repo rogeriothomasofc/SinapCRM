@@ -38,11 +38,8 @@ import Prompts from "../pages/Prompts";
 import QueueIntegration from "../pages/QueueIntegration";
 import ForgetPassword from "../pages/ForgetPassWord/"; // Reset PassWd
 import CampaignsPhrase from "../pages/CampaignsPhrase";
-import AdTracking from "../pages/AdTracking";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
-import FollowUp from "../pages/FollowUp";
-import Whitelabel from "../pages/Whitelabel";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -117,7 +114,6 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/kanban" component={Kanban} isPrivate />
-                <Route exact path="/ad-tracking" component={AdTracking} isPrivate />
                 <Route
                   exact
                   path="/financeiro"
@@ -191,8 +187,6 @@ const Routes = () => {
                     />
                   </>
                 )}
-                <Route exact path="/followup" component={FollowUp} isPrivate />
-                <Route exact path="/whitelabel" component={Whitelabel} isPrivate />
               </LoggedInLayout>
             </WhatsAppsProvider>
           </Switch>

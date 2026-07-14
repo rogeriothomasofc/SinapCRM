@@ -57,7 +57,7 @@ const ListTicketsServiceKanban = async ({
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "profilePicUrl", "isGroup", "businessName"]
+      attributes: ["id", "name", "number", "email", "profilePicUrl", "isGroup"]
     },
     {
       model: Queue,

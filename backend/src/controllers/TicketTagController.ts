@@ -2,19 +2,12 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import TicketTag from '../models/TicketTag';
 import Tag from '../models/Tag'
-import TriggerFollowUpService from "../services/FollowUpService/TriggerFollowUpService";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId, tagId } = req.params;
 
   try {
     const ticketTag = await TicketTag.create({ ticketId, tagId } as any);
-
-    // Fire follow-up triggers for kanban columns
-    const tag = await Tag.findOne({ where: { id: tagId } });
-    if (tag && tag.kanban === 1) {
-      TriggerFollowUpService(parseInt(ticketId), parseInt(tagId), "enter").catch(() => {});
-    }
 
     return res.status(201).json(ticketTag);
   } catch (error) {
@@ -57,11 +50,6 @@ export const remove = async (req: Request, res: Response): Promise<Response> => 
     const tagIdsWithKanbanOne = tagsWithKanbanOne.map((tag) => tag.id);
     if (tagIdsWithKanbanOne.length > 0) {
       await TicketTag.destroy({ where: { ticketId, tagId: tagIdsWithKanbanOne } });
-
-      // Fire exit follow-up triggers for removed kanban columns
-      for (const removedTagId of tagIdsWithKanbanOne) {
-        TriggerFollowUpService(parseInt(ticketId), removedTagId, "exit").catch(() => {});
-      }
     }
 
     return res.status(200).json({ message: 'Ticket tags removed successfully.' });
