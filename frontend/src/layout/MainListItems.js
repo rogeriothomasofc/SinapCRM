@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useReducer, useState } from "react";
-import { Link as RouterLink, useHistory } from "react-router-dom";
+import React, { useContext, useEffect, useState } from "react";
+import { Link as RouterLink, useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   ListItem,
@@ -7,7 +7,6 @@ import {
   ListItemText,
   Collapse,
   List,
-  Badge,
   Tooltip,
 } from "@material-ui/core";
 
@@ -21,7 +20,6 @@ import EventAvailableOutlinedIcon from "@material-ui/icons/EventAvailableOutline
 import ExpandLessOutlinedIcon from "@material-ui/icons/ExpandLessOutlined";
 import ExpandMoreOutlinedIcon from "@material-ui/icons/ExpandMoreOutlined";
 import ListAltOutlinedIcon from "@material-ui/icons/ListAltOutlined";
-import ForumOutlinedIcon from "@material-ui/icons/ForumOutlined";
 import ViewComfyOutlinedIcon from '@material-ui/icons/ViewComfyOutlined';
 import ChatBubbleOutlineOutlinedIcon from '@material-ui/icons/ChatBubbleOutlineOutlined';
 import FlashOnOutlinedIcon from "@material-ui/icons/FlashOnOutlined";
@@ -29,10 +27,6 @@ import FlashOnOutlinedIcon from "@material-ui/icons/FlashOnOutlined";
 import { i18n } from "../translate/i18n";
 import { AuthContext } from "../context/Auth/AuthContext";
 import { Can } from "../components/Can";
-import { SocketContext } from "../context/Socket/SocketContext";
-import { isArray } from "lodash";
-import api from "../services/api";
-import toastError from "../errors/toastError";
 import usePlans from "../hooks/usePlans";
 
 // Cores do tema principal do software (manter consistente)
@@ -52,98 +46,90 @@ const secondaryThemeColor = {
 
 const useStyles = makeStyles((theme) => ({
   listItem: {
-    padding: theme.spacing(0.8, 1.5),
-    borderRadius: theme.spacing(1),
-    marginBottom: theme.spacing(0.3),
-    marginTop: theme.spacing(0.3),
-    marginLeft: theme.spacing(0.5),
-    marginRight: theme.spacing(1),
-    transition: "all 0.2s ease",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 104,
+    minHeight: 92,
+    padding: "8px 4px",
+    borderRadius: 14,
+    marginBottom: 4,
+    marginLeft: "auto",
+    marginRight: "auto",
+    transition: "background-color 160ms ease, transform 160ms ease",
     "&:hover": {
-      backgroundColor: theme.palette.type === 'dark' 
-        ? 'rgba(255, 255, 255, 0.08)' 
-        : 'rgba(0, 0, 0, 0.04)',
+      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    },
+    "& .MuiListItem-root": {
+      flexDirection: "column",
     },
   },
   listItemActive: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     "& $listItemIcon": {
-      color: theme.palette.primary.main,
+      color: '#fff',
     },
     "& $listItemText": {
-      "& span": {
-        color: theme.palette.primary.main,
-        fontWeight: 600,
-      }
+      color: '#fff',
+      fontWeight: 700,
     },
   },
   listItemIcon: {
-    minWidth: 36,
-    color: theme.palette.type === 'dark' 
-      ? theme.palette.grey[400] 
-      : theme.palette.text.secondary,
-    marginRight: theme.spacing(0.5),
+    minWidth: "unset",
+    color: 'rgba(255, 255, 255, 0.85)',
+    margin: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     "& svg": {
-      fontSize: 24,
+      fontSize: 32,
+      color: 'rgba(255, 255, 255, 0.85)',
+      display: "block",
     }
   },
   listItemText: {
-    fontSize: 14,
-    fontWeight: 500,
     margin: 0,
-    "& span": {
-      fontSize: 14,
-      color: theme.palette.type === 'dark' 
-        ? theme.palette.grey[200] 
-        : theme.palette.text.primary,
-    }
+    flex: "none",
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'rgba(255, 255, 255, 0.85)',
+    lineHeight: 1.2,
   },
   divider: {
     margin: theme.spacing(1, 0),
-    backgroundColor: theme.palette.type === 'dark' 
-      ? 'rgba(255, 255, 255, 0.12)' 
-      : 'rgba(0, 0, 0, 0.06)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   nestedList: {
     paddingLeft: theme.spacing(2.5),
   },
-  badge: {
-    marginRight: theme.spacing(1),
-    "& .MuiBadge-badge": {
-      backgroundColor: theme.palette.type === 'dark' 
-        ? theme.palette.error.main 
-        : theme.palette.secondary.main,
-    }
-  },
   versionInfo: {
     fontSize: 11,
     padding: theme.spacing(1, 2),
-    textAlign: "right",
+    textAlign: "center",
     fontWeight: 500,
-    color: theme.palette.type === 'dark' 
-      ? theme.palette.grey[500] 
-      : theme.palette.text.secondary,
+    color: 'rgba(255, 255, 255, 0.4)',
   },
   connectionWarning: {
     backgroundColor: theme.palette.error.main,
-    color: theme.palette.error.contrastText,
+    color: '#fff',
     height: 16,
     width: 16,
     fontSize: 10,
     marginLeft: 8,
   },
   expandIcon: {
-    color: theme.palette.type === 'dark' 
-      ? theme.palette.grey[400] 
-      : theme.palette.text.secondary,
+    color: 'rgba(255, 255, 255, 0.6)',
   }
 }));
 
 function ListItemLink(props) {
-  const { icon, primary, to, className, badge, badgeColor, collapsed } = props;
+  const { icon, primary, to, className, collapsed } = props;
   const classes = useStyles();
   const history = useHistory();
-  const isActive = history.location.pathname === to;
+  const location = useLocation();
+  const isActive = location.pathname === to;
 
   const renderLink = React.useMemo(
     () =>
@@ -157,106 +143,24 @@ function ListItemLink(props) {
     <li>
       <ListItem
         button
-        dense
         component={renderLink}
         className={`${classes.listItem} ${isActive ? classes.listItemActive : ''} ${className || ''}`}
-        style={collapsed ? { justifyContent: "center", paddingLeft: 0, paddingRight: 0 } : {}}
       >
         {icon ? (
-          <ListItemIcon
-            className={classes.listItemIcon}
-            style={collapsed ? { minWidth: 0, justifyContent: "center", marginRight: 0 } : {}}
-          >
-            {badge ? (
-              <Badge
-                color={badgeColor || "secondary"}
-                variant="dot"
-                invisible={!badge}
-                className={classes.badge}
-              >
-                {icon}
-              </Badge>
-            ) : (
-              icon
-            )}
+          <ListItemIcon className={classes.listItemIcon}>
+            {icon}
           </ListItemIcon>
         ) : null}
-        {!collapsed && (
-          <ListItemText
-            primary={primary}
-            primaryTypographyProps={{ className: classes.listItemText }}
-          />
-        )}
+        <ListItemText
+          primary={primary}
+          classes={{ primary: classes.listItemText }}
+        />
       </ListItem>
     </li>
   );
 
-  if (collapsed) {
-    return (
-      <Tooltip title={primary} placement="right" arrow>
-        {item}
-      </Tooltip>
-    );
-  }
-
   return item;
 }
-
-const reducer = (state, action) => {
-  if (action.type === "LOAD_CHATS") {
-    const chats = action.payload;
-    const newChats = [];
-
-    if (isArray(chats)) {
-      chats.forEach((chat) => {
-        const chatIndex = state.findIndex((u) => u.id === chat.id);
-        if (chatIndex !== -1) {
-          state[chatIndex] = chat;
-        } else {
-          newChats.push(chat);
-        }
-      });
-    }
-
-    return [...state, ...newChats];
-  }
-
-  if (action.type === "UPDATE_CHATS") {
-    const chat = action.payload;
-    const chatIndex = state.findIndex((u) => u.id === chat.id);
-
-    if (chatIndex !== -1) {
-      state[chatIndex] = chat;
-      return [...state];
-    } else {
-      return [chat, ...state];
-    }
-  }
-
-  if (action.type === "DELETE_CHAT") {
-    const chatId = action.payload;
-
-    const chatIndex = state.findIndex((u) => u.id === chatId);
-    if (chatIndex !== -1) {
-      state.splice(chatIndex, 1);
-    }
-    return [...state];
-  }
-
-  if (action.type === "RESET") {
-    return [];
-  }
-
-  if (action.type === "CHANGE_CHAT") {
-    const changedChats = state.map((chat) => {
-      if (chat.id === action.payload.chat.id) {
-        return action.payload.chat;
-      }
-      return chat;
-    });
-    return changedChats;
-  }
-};
 
 const MainListItems = (props) => {
   const classes = useStyles();
@@ -268,24 +172,12 @@ const MainListItems = (props) => {
   const [showKanban, setShowKanban] = useState(false);
   const history = useHistory();
 
-  const [invisible, setInvisible] = useState(true);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [searchParam] = useState("");
-  const [chats, dispatch] = useReducer(reducer, []);
   const { getPlanCompany } = usePlans();
-  
-  const socketManager = useContext(SocketContext);
-
-  useEffect(() => {
-    dispatch({ type: "RESET" });
-    setPageNumber(1);
-  }, [searchParam]);
 
   useEffect(() => {
     async function fetchData() {
       const companyId = user.companyId;
       const planConfigs = await getPlanCompany(undefined, companyId);
-
       setShowCampaigns(planConfigs.plan.useCampaigns);
       setShowKanban(planConfigs.plan.useKanban);
     }
@@ -294,64 +186,10 @@ const MainListItems = (props) => {
   }, []);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchChats();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParam, pageNumber]);
-
-  useEffect(() => {
-    const companyId = localStorage.getItem("companyId");
-    const socket = socketManager.getSocket(companyId);
-
-    socket.on(`company-${companyId}-chat`, (data) => {
-      if (data.action === "new-message") {
-        dispatch({ type: "CHANGE_CHAT", payload: data });
-      }
-      if (data.action === "update") {
-        dispatch({ type: "CHANGE_CHAT", payload: data });
-      }
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, [socketManager]);
-
-  useEffect(() => {
-    let unreadsCount = 0;
-    if (chats.length > 0) {
-      for (let chat of chats) {
-        for (let chatUser of chat.users) {
-          if (chatUser.userId === user.id) {
-            unreadsCount += chatUser.unreads;
-          }
-        }
-      }
-    }
-    if (unreadsCount > 0) {
-      setInvisible(false);
-    } else {
-      setInvisible(true);
-    }
-  }, [chats, user.id]);
-
-  useEffect(() => {
     if (localStorage.getItem("cshow")) {
       setShowCampaigns(true);
     }
   }, []);
-
-  const fetchChats = async () => {
-    try {
-      const { data } = await api.get("/chats/", {
-        params: { searchParam, pageNumber },
-      });
-      dispatch({ type: "LOAD_CHATS", payload: data.records });
-    } catch (err) {
-      toastError(err);
-    }
-  };
 
   return (
     <div onClick={drawerClose}>
@@ -481,10 +319,6 @@ const MainListItems = (props) => {
                     </ListItem>
                     <Collapse in={openFlowsSubmenu} timeout="auto" unmountOnExit className={classes.nestedList}>
                       <List component="div" disablePadding>
-                        <ListItem button onClick={() => history.push("/phrase-lists")} className={classes.listItem}>
-                          <ListItemIcon className={classes.listItemIcon}><EventAvailableOutlinedIcon /></ListItemIcon>
-                          <ListItemText primary="Campanha" primaryTypographyProps={{ className: classes.listItemText }} />
-                        </ListItem>
                         <ListItem button onClick={() => history.push("/flowbuilders")} className={classes.listItem}>
                           <ListItemIcon className={classes.listItemIcon}><AccountTreeOutlinedIcon /></ListItemIcon>
                           <ListItemText primary="Conversa" primaryTypographyProps={{ className: classes.listItemText }} />
@@ -515,16 +349,7 @@ const MainListItems = (props) => {
         collapsed={collapsed}
       />
 
-      {/* 9. Chat Interno */}
-      <ListItemLink
-        to="/chats"
-        primary={i18n.t("mainDrawer.listItems.chats")}
-        icon={<ForumOutlinedIcon />}
-        badge={!invisible}
-        collapsed={collapsed}
-      />
-
-      {/* 10. Configurações (admin) */}
+      {/* 9. Configurações (admin) */}
       <Can
         role={user.profile}
         perform="drawer-admin-items:view"
