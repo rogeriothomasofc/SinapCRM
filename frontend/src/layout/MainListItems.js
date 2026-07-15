@@ -300,31 +300,13 @@ const MainListItems = (props) => {
                       </List>
                     </Collapse>
 
-                    {/* Fluxos expandido */}
-                    <ListItem
-                      button
-                      onClick={() => setOpenFlowsSubmenu((prev) => !prev)}
-                      className={classes.listItem}
-                    >
-                      <ListItemIcon className={classes.listItemIcon}>
-                        <AccountTreeOutlinedIcon />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={i18n.t("mainDrawer.listItems.flows")}
-                        primaryTypographyProps={{ className: classes.listItemText }}
-                      />
-                      {openFlowsSubmenu
-                        ? <ExpandLessOutlinedIcon fontSize="small" className={classes.expandIcon} />
-                        : <ExpandMoreOutlinedIcon fontSize="small" className={classes.expandIcon} />}
-                    </ListItem>
-                    <Collapse in={openFlowsSubmenu} timeout="auto" unmountOnExit className={classes.nestedList}>
-                      <List component="div" disablePadding>
-                        <ListItem button onClick={() => history.push("/flowbuilders")} className={classes.listItem}>
-                          <ListItemIcon className={classes.listItemIcon}><AccountTreeOutlinedIcon /></ListItemIcon>
-                          <ListItemText primary="Conversa" primaryTypographyProps={{ className: classes.listItemText }} />
-                        </ListItem>
-                      </List>
-                    </Collapse>
+                    {/* Fluxos — link direto */}
+                    <ListItemLink
+                      to="/flowbuilders"
+                      primary={i18n.t("mainDrawer.listItems.flows")}
+                      icon={<AccountTreeOutlinedIcon />}
+                      collapsed={collapsed}
+                    />
                   </>
                 )}
               </>
