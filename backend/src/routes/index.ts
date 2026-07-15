@@ -35,6 +35,10 @@ import flowDefaultRoutes from "./flowDefaultRoutes";
 import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import platformSettingsRoutes from "./platformSettingsRoutes";
+import ssoRoutes from "./ssoRoutes";
+import wsInternalRoutes from "./wsInternalRoutes";
+import wsAutomationRoutes from "./wsAutomationRoutes";
+import wsStoreConfigRoutes from "./wsStoreConfigRoutes";
 const routes = Router();
 
 routes.use(userRoutes);
@@ -74,5 +78,9 @@ routes.use(forgotsRoutes);
 routes.use(flowDefaultRoutes);
 routes.use(flowBuilder)
 routes.use(flowCampaignRoutes)
+routes.use(ssoRoutes);
+routes.use(wsInternalRoutes);
+routes.use(wsAutomationRoutes);
+routes.use(wsStoreConfigRoutes);
 
 export default routes;
