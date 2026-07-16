@@ -1191,7 +1191,7 @@ const FlowBuilderConfig = () => {
             {/* Menu button */}
             <Box 
               className={classes.menuToggle}
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => { setMenuOpen(p => !p); setTriggerPanelOpen(false); setRulesPanelOpen(false); }}
             >
               <MenuIcon />
             </Box>
@@ -1307,7 +1307,7 @@ const FlowBuilderConfig = () => {
 
             {/* Botão Acionamentos */}
             <Box
-              onClick={() => { setTriggerPanelOpen(!triggerPanelOpen); setMenuOpen(false); }}
+              onClick={() => { setTriggerPanelOpen(p => !p); setMenuOpen(false); setRulesPanelOpen(false); }}
               style={{
                 position: "absolute",
                 top: 70,
