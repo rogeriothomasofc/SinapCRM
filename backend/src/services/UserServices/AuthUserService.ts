@@ -46,17 +46,8 @@ const AuthUserService = async ({
     throw new AppError("ERR_INVALID_CREDENTIALS", 401);
   }
 
-  if (user.company) {
-    if (!user.company.status) {
-      throw new AppError("ERR_COMPANY_DISABLED", 403);
-    }
-    if (user.company.dueDate) {
-      const due = new Date(user.company.dueDate);
-      due.setHours(23, 59, 59, 999);
-      if (new Date() > due) {
-        throw new AppError("ERR_COMPANY_EXPIRED", 403);
-      }
-    }
+  if (user.company && !user.company.status) {
+    throw new AppError("ERR_COMPANY_DISABLED", 403);
   }
 
   const token = createAccessToken(user);

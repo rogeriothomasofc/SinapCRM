@@ -40,6 +40,17 @@ const useStyles = makeStyles(theme => ({
 	noShadow: {
 		boxShadow: "none !important",
 	},
+	iconButton: {
+		width: 40,
+		height: 40,
+		padding: 0,
+		margin: "0 4px",
+		color: "#fff",
+		backgroundColor: theme.palette.primary.main,
+		borderRadius: 12,
+		"&:hover": { backgroundColor: theme.palette.primary.main, opacity: 0.9 },
+		"& .MuiSvgIcon-root": { fontSize: 18, color: "#fff" },
+	},
 }));
 
 const NotificationsPopOver = (volume) => {
@@ -227,8 +238,7 @@ const NotificationsPopOver = (volume) => {
 				onClick={handleClick}
 				ref={anchorEl}
 				aria-label="Open Notifications"
-				color="inherit"
-				style={{color:"white"}}
+				className={classes.iconButton}
 			>
 				<Badge overlap="rectangular" badgeContent={notifications.length} color="secondary">
 					<ChatIcon />

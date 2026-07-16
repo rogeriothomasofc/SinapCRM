@@ -19,24 +19,14 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
+import FlashOnIcon from "@material-ui/icons/FlashOn";
+import AddIcon from "@material-ui/icons/Add";
+import EditIcon from "@material-ui/icons/Edit";
+import DeleteIcon from "@material-ui/icons/Delete";
 // Ícones personalizados
 import CreateIcon from "@material-ui/icons/Create";
 
-// === OUTRAS OPÇÕES DE ÍCONES ===
-// Para o botão de assinar:
-// import EditIcon from "@material-ui/icons/Edit";
-// import BorderColorIcon from "@material-ui/icons/BorderColor";
-// import GestureIcon from "@material-ui/icons/Gesture";
-// import DrawIcon from "@material-ui/icons/Draw";
-
-// Para o botão de enviar:
-// import SendRoundedIcon from "@material-ui/icons/SendRounded";
-// import TelegramIcon from "@material-ui/icons/Telegram";
-// import NavigationIcon from "@material-ui/icons/Navigation";
-// import NearMeIcon from "@material-ui/icons/NearMe";
-// import ArrowUpwardIcon from "@material-ui/icons/ArrowUpward";
-
-import { Fade, Zoom, Tooltip } from "@material-ui/core";
+import { Fade, Zoom, Tooltip, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, ListItemSecondaryAction, TextField } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
 
@@ -51,6 +41,7 @@ import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
+import QuickMessageDialog from "../QuickMessageDialog";
 
 /*
  * MessageInputCustom - Versão Reorganizada
@@ -742,6 +733,125 @@ const CustomInput = (props) => {
   );
 };
 
+const QuickMessagesModal = ({ open, onClose, onSelect }) => {
+  const [messages, setMessages] = useState([]);
+  const [search, setSearch] = useState("");
+  const [quickDialogOpen, setQuickDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const { user } = useContext(AuthContext);
+  const { list: listQuickMessages, deleteRecord } = useQuickMessages();
+
+  const companyId = localStorage.getItem("companyId");
+
+  const fetchMessages = async () => {
+    const msgs = await listQuickMessages({ companyId, userId: user.id });
+    setMessages(msgs);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    fetchMessages();
+    setSearch("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const filtered = messages.filter(m =>
+    m.shortcode.toLowerCase().includes(search.toLowerCase()) ||
+    m.message.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleNew = () => {
+    setEditingId(null);
+    setQuickDialogOpen(true);
+  };
+
+  const handleEdit = (m) => {
+    setEditingId(m.id);
+    setQuickDialogOpen(true);
+  };
+
+  const handleDelete = async (m) => {
+    try {
+      await deleteRecord(m.id);
+      await fetchMessages();
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  return (
+    <>
+      <QuickMessageDialog
+        open={quickDialogOpen}
+        onClose={() => setQuickDialogOpen(false)}
+        quickemessageId={editingId}
+        reload={fetchMessages}
+      />
+
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle style={{ paddingBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FlashOnIcon style={{ color: "#6B63FF" }} />
+              Respostas Rápidas
+            </span>
+            <Tooltip title="Nova resposta">
+              <IconButton size="small" onClick={handleNew} style={{ color: "#6B63FF" }}>
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </DialogTitle>
+
+        <DialogContent style={{ paddingTop: 0 }}>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder="Pesquisar resposta..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ marginBottom: 8 }}
+          />
+          <List dense disablePadding>
+            {filtered.length === 0 && (
+              <ListItem>
+                <ListItemText secondary="Nenhuma resposta encontrada." />
+              </ListItem>
+            )}
+            {filtered.map(m => (
+              <ListItem
+                button
+                key={m.id}
+                onClick={() => { onSelect(m); onClose(); }}
+                style={{ borderRadius: 8, marginBottom: 2, paddingRight: 80 }}
+              >
+                <ListItemText
+                  primary={<span style={{ fontWeight: 600, color: "#6B63FF" }}>/{m.shortcode}</span>}
+                  secondary={m.message}
+                  secondaryTypographyProps={{ style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }}
+                />
+                <ListItemSecondaryAction>
+                  <Tooltip title="Editar">
+                    <IconButton size="small" onClick={e => { e.stopPropagation(); handleEdit(m); }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Excluir">
+                    <IconButton size="small" onClick={e => { e.stopPropagation(); handleDelete(m); }}>
+                      <DeleteIcon fontSize="small" style={{ color: "#f44336" }} />
+                    </IconButton>
+                  </Tooltip>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const MessageInputCustom = (props) => {
   const { ticketStatus, ticketId } = props;
   const classes = useStyles();
@@ -757,6 +867,7 @@ const MessageInputCustom = (props) => {
   const { user } = useContext(AuthContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
+  const [showQuickModal, setShowQuickModal] = useState(false);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -828,6 +939,32 @@ const MessageInputCustom = (props) => {
 
     setInputMessage("");
     setInputMessage(value.value);
+  };
+
+  const handleSendDirectMessage = async (text) => {
+    setLoading(true);
+    const message = {
+      read: 1,
+      fromMe: true,
+      mediaUrl: "",
+      body: signMessage ? `*${user?.name}:*\n${text.trim()}` : text.trim(),
+      quotedMsg: replyingMessage,
+    };
+    try {
+      await api.post(`/messages/${ticketId}`, message);
+    } catch (err) {
+      toastError(err);
+    }
+    setLoading(false);
+    setReplyingMessage(null);
+  };
+
+  const handleQuickModalSelect = (m) => {
+    if (m.mediaPath) {
+      handleQuickAnswersClick({ value: m.message, mediaPath: m.mediaPath });
+    } else {
+      handleSendDirectMessage(m.message);
+    }
   };
 
   const handleUploadMedia = async (e) => {
@@ -1009,6 +1146,25 @@ const MessageInputCustom = (props) => {
           <SignSwitch
             setSignMessage={setSignMessage}
             signMessage={signMessage}
+          />
+
+          <Tooltip title="Respostas Rápidas" placement="top">
+            <IconButton
+              component="span"
+              disabled={disableOption()}
+              onClick={() => setShowQuickModal(true)}
+              className={classes.inputIconButton}
+              size="small"
+              style={{ color: showQuickModal ? "#6B63FF" : undefined }}
+            >
+              <FlashOnIcon />
+            </IconButton>
+          </Tooltip>
+
+          <QuickMessagesModal
+            open={showQuickModal}
+            onClose={() => setShowQuickModal(false)}
+            onSelect={handleQuickModalSelect}
           />
 
           <CustomInput

@@ -6,6 +6,7 @@ import ShowContactService from "../ContactServices/ShowContactService";
 import { getIO } from "../../libs/socket";
 import GetDefaultWhatsAppByUser from "../../helpers/GetDefaultWhatsAppByUser";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
+import { notifyWsNewTicket } from "../../lib/wsSync";
 
 interface Request {
   contactId: number;
@@ -42,7 +43,7 @@ const CreateTicketService = async ({
 
   const { isGroup } = await ShowContactService(contactId, companyId);
 
-  const [{ id }] = await Ticket.findOrCreate({
+  const [{ id }, created] = await Ticket.findOrCreate({
     where: {
       contactId,
       companyId,
@@ -75,6 +76,15 @@ const CreateTicketService = async ({
     action: "update",
     ticket
   });
+
+  if (created) {
+    notifyWsNewTicket({
+      companyId,
+      ticketId: ticket.id,
+      contactName: ticket.contact?.name || "",
+      contactNumber: ticket.contact?.number || "",
+    }).catch(() => {});
+  }
 
   return ticket;
 };

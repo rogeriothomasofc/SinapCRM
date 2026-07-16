@@ -26,7 +26,15 @@ const useStyles = makeStyles((theme) => ({
         boxShadow: "none !important",
     },
     icons: {
+        width: 40,
+        height: 40,
+        padding: 0,
         color: "#fff",
+        backgroundColor: theme.palette.primary.main,
+        borderRadius: 12,
+        margin: "0 4px",
+        "&:hover": { backgroundColor: theme.palette.primary.main, opacity: 0.9 },
+        "& .MuiSvgIcon-root": { fontSize: 18, color: "#fff" },
     },
     customBadge: {
         backgroundColor: "#f44336",

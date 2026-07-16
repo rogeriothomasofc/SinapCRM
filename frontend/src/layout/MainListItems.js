@@ -315,14 +315,6 @@ const MainListItems = (props) => {
         )}
       />
 
-      {/* 7. Respostas Rápidas */}
-      <ListItemLink
-        to="/quick-messages"
-        primary={i18n.t("mainDrawer.listItems.quickMessages")}
-        icon={<FlashOnOutlinedIcon />}
-        collapsed={collapsed}
-      />
-
       {/* 8. Agendamentos */}
       <ListItemLink
         to="/schedules"

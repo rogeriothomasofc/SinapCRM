@@ -10,12 +10,14 @@ import {
   MenuItem,
   IconButton,
   Menu,
+  Button,
   useTheme,
   useMediaQuery,
   Avatar,
   Box,
   Tooltip,
   List,
+  Badge,
 } from "@material-ui/core";
 
 // Modern Icons - Usando ícones mais modernos e minimalistas
@@ -30,7 +32,6 @@ import Brightness4OutlinedIcon from '@material-ui/icons/Brightness4Outlined';
 import Brightness7OutlinedIcon from '@material-ui/icons/Brightness7Outlined';
 import LanguageOutlinedIcon from "@material-ui/icons/LanguageOutlined";
 import VolumeUpOutlinedIcon from "@material-ui/icons/VolumeUpOutlined";
-import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
 import AnnouncementOutlinedIcon from "@material-ui/icons/AnnouncementOutlined";
 import SyncOutlinedIcon from "@material-ui/icons/SyncOutlined";
 import TranslateOutlinedIcon from "@material-ui/icons/TranslateOutlined";
@@ -40,257 +41,201 @@ import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined';
 import NightsStayOutlinedIcon from '@material-ui/icons/NightsStayOutlined';
 import HelpOutlineIcon from '@material-ui/icons/HelpOutline';
 import SettingsOutlinedIcon from '@material-ui/icons/SettingsOutlined';
+import OpenInNewOutlinedIcon from '@material-ui/icons/OpenInNewOutlined';
 
+import api from "../services/api";
 import MainListItems from "./MainListItems";
-import NotificationsPopOver from "../components/NotificationsPopOver";
 import NotificationsVolume from "../components/NotificationsVolume";
+import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
-import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
 import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
-import ChatPopover from "../pages/Chat/ChatPopover";
 
 import { useDate } from "../hooks/useDate";
 
 import ColorModeContext from "../layout/themeContext";
 import LanguageControl from "../components/LanguageControl";
 
-const drawerWidth = 230;
+const drawerWidth = 132;
 
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     height: "100vh",
-    [theme.breakpoints.down("sm")]: {
-      height: "calc(100vh - 56px)",
-    },
-    backgroundColor: theme.palette.fancyBackground,
-    '& .MuiButton-outlinedPrimary': {
-      color: theme.mode === 'light' ? '#FFF' : '#FFF',
-      backgroundColor: theme.mode === 'light' ? theme.palette.primary.main : '#1c1c1c',
-    },
-    '& .MuiTab-textColorPrimary.Mui-selected': {
-      color: theme.mode === 'light' ? 'Primary' : '#FFF',
-    },
-    // Estilos globais de scrollbar melhorados
-    '& ::-webkit-scrollbar': {
-      width: '6px',
-      height: '6px',
-    },
-    '& ::-webkit-scrollbar-track': {
-      background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      borderRadius: '3px',
-    },
+    overflow: "hidden",
+    backgroundColor: theme.mode === 'dark' ? '#121212' : '#f5f6fb',
+    '& ::-webkit-scrollbar': { width: '6px', height: '6px' },
+    '& ::-webkit-scrollbar-track': { background: 'transparent', borderRadius: '3px' },
     '& ::-webkit-scrollbar-thumb': {
-      background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+      background: theme.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
       borderRadius: '3px',
-      '&:hover': {
-        background: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-      },
-    },
-    '& ::-webkit-scrollbar-corner': {
-      background: 'transparent',
     },
   },
-  toolbar: {
-    paddingRight: 24,
-    paddingLeft: ({ drawerOpen }) => drawerOpen ? drawerWidth + 24 : 24 + 72,
-    minHeight: 48,
-    backgroundColor: "transparent",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    transition: theme.transitions.create(["padding"], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  appBar: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 48,
-    zIndex: theme.zIndex.drawer - 1,
-    backgroundColor: theme.mode === 'dark' ? "rgba(28, 28, 28, 0.8)" : "rgba(255, 255, 255, 0.8)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    boxShadow: "none",
-    borderBottom: theme.mode === 'dark' ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(0, 0, 0, 0.08)",
-    "& .MuiIconButton-root": {
-      color: theme.palette.primary.main + " !important",
-    },
-    "& .MuiSvgIcon-root": {
-      color: theme.palette.primary.main + " !important",
-    },
-    "& svg": {
-      color: theme.palette.primary.main + " !important",
-    },
-  },
-  appBarShift: {
-    // Removemos completamente as transições e margens
-    // A barra sempre fica na mesma posição
-  },
-  menuButton: {
-    position: "fixed",
-    top: theme.spacing(2),
-    left: ({ drawerOpen }) => drawerOpen 
-      ? drawerWidth - 15
-      : theme.spacing(7) - 15,
-    zIndex: theme.zIndex.drawer + 2,
-    backgroundColor: theme.palette.background.paper,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-    width: 30,
-    height: 30,
-    padding: 0,
-    transition: theme.transitions.create(['left'], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-    borderRadius: "50%",
-    color: theme.palette.primary.main,
-    opacity: 1,
-    "&:hover": {
-      backgroundColor: theme.palette.background.paper,
-      opacity: 1,
-    },
-    "& .MuiSvgIcon-root": {
-      color: theme.palette.primary.main,
-      fontSize: 18,
-    },
-    [theme.breakpoints.up("sm")]: {
-      left: ({ drawerOpen }) => drawerOpen 
-        ? drawerWidth - 15
-        : theme.spacing(9) - 15,
-    },
-  },
-  title: {
-    flexGrow: 1,
-    fontSize: 14,
-    fontWeight: 500,
-    color: theme.palette.primary.main,
-    lineHeight: 1.2,
-  },
-  drawerPaper: {
-    position: "relative",
-    height: "100%",
-    whiteSpace: "nowrap",
+  // ── SIDEBAR ────────────────────────────────────────────
+  sidebar: {
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
-    borderRight: "none",
-    overflowX: "hidden",
-    zIndex: theme.zIndex.drawer,
-    display: "flex",
-    flexDirection: "column",
+    flexShrink: 0,
+    position: 'relative',
+    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : theme.palette.primary.main,
+    borderRadius: '0 24px 24px 0',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    zIndex: 20,
+    [theme.breakpoints.down('xs')]: { display: 'none' },
   },
-  drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9),
-    },
+  sidebarLogo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px 8px 16px',
+    minHeight: 80,
+    flexShrink: 0,
   },
-  appBarSpacer: {
-    minHeight: 48,
+  logo: {
+    height: 48,
+    width: 48,
+    objectFit: 'contain',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  sidebarNav: {
+    flex: 1,
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    padding: '20px 12px',
+  },
+  sidebarBottom: {
+    flexShrink: 0,
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '8px 8px 16px',
+  },
+  versionInfo: {
+    fontSize: 10,
+    fontWeight: 500,
+    color: 'rgba(255,255,255,0.35)',
+  },
+  // ── RIGHT PANEL ────────────────────────────────────────
+  rightPanel: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
+    position: 'relative',
+    zIndex: 5,
+    backgroundColor: theme.mode === 'dark' ? '#1e1e1e' : '#fff',
+    borderBottom: theme.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e5e5',
+    marginLeft: -24,
+    padding: '16px 32px 16px 64px',
+    minHeight: 96,
+    gap: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: 500,
+    color: theme.palette.text.primary,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   content: {
     flex: 1,
-    overflow: "auto",
-    paddingTop: 48,
+    overflow: 'auto',
   },
-  containerWithScroll: {
-    flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "auto",
-    "& .MuiListItemText-primary": {
-      fontSize: "14px",
-      fontWeight: 500,
+  // ── ACTION BUTTONS in header ───────────────────────────
+  iconButton: {
+    width: 40,
+    height: 40,
+    minWidth: 40,
+    minHeight: 40,
+    padding: 0,
+    margin: theme.spacing(0, 0.5),
+    color: '#fff',
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 12,
+    flexShrink: 0,
+    "&:hover": {
+      backgroundColor: theme.palette.primary.main,
+      opacity: 0.9,
     },
-    "& .MuiListItemIcon-root": {
-      minWidth: 40,
-    },
-    "& .MuiListItem-root.Mui-selected": {
-      backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-      "&:hover": {
-        backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
-      },
-      "& .MuiListItemText-primary": {
-        color: theme.mode === 'dark' ? '#fff' : theme.palette.text.primary,
-        fontWeight: 600,
-      },
-      "& .MuiListItemIcon-root": {
-        color: theme.mode === 'dark' ? '#fff' : theme.palette.primary.main,
-      },
-    },
-  },
-  logo: {
-    height: 60, //tava 40
-    maxWidth: ({ drawerOpen }) => drawerOpen ? 180 : 40, //tava 140
-    objectFit: "contain",
-    transition: "max-width 0.3s",
-  },
-  toolbarIcon: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    padding: "0 16px",
-    minHeight: "64px",
-    [theme.breakpoints.down("sm")]: {
-      minHeight: "56px",
-    }
+    "& .MuiSvgIcon-root": { color: '#fff', fontSize: 18 },
+    "& .MuiTouchRipple-root": { borderRadius: 12 },
   },
   iconButtonLabel: {
-    fontSize: 20,
-    color: theme.palette.primary.main,
-    transition: "transform 0.2s ease",
+    fontSize: 18,
+    color: '#fff',
   },
-  iconButton: {
-    padding: 6,
-    margin: theme.spacing(0, 0.25),
-    color: theme.palette.primary.main,
-    "&:hover": {
-      backgroundColor: theme.mode === 'light' ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.08)",
-      "& .MuiSvgIcon-root": {
-        transform: "scale(1.1)",
-      },
-    },
-    "& .MuiSvgIcon-root": {
-      color: theme.palette.primary.main,
-      transition: "transform 0.2s ease",
-    },
+  onlineAvatar: {
+    width: 32,
+    height: 32,
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    outline: `2px solid ${theme.mode === 'dark' ? '#1e1e1e' : '#fff'}`,
+    marginLeft: -10,
+    cursor: 'default',
   },
-  listWrapper: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    height: "calc(100% - 64px)",
-    overflowY: "auto",
-    overflowX: "hidden",
+  userAvatar: {
+    width: 32,
+    height: 32,
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    cursor: 'pointer',
   },
-  versionInfo: {
-    fontSize: 12,
-    padding: theme.spacing(1, 2),
-    textAlign: "right",
+  onlineDot: {
+    backgroundColor: '#4caf50',
+    outline: `2px solid ${theme.mode === 'dark' ? '#1e1e1e' : '#fff'}`,
+    borderRadius: '50%',
+    width: 10,
+    height: 10,
+  },
+  overflowChip: {
+    width: 32,
+    height: 32,
+    fontSize: '0.7rem',
+    fontWeight: 700,
+    backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.12)' : theme.palette.primary.main,
+    color: '#fff',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -6,
+    border: `2px solid ${theme.mode === 'dark' ? '#1e1e1e' : '#fff'}`,
+    flexShrink: 0,
+  },
+  openInNewButton: {
+    height: 40,
+    paddingLeft: 14,
+    paddingRight: 16,
+    color: '#fff',
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 12,
+    textTransform: 'none',
+    fontSize: 13,
     fontWeight: 500,
-    color: theme.mode === 'dark' ? 'rgba(255,255,255,0.5)' : theme.palette.text.secondary,
-    backgroundColor: theme.mode === 'dark' ? '#1c1c1c' : '#fff',
-  }
+    flexShrink: 0,
+    "&:hover": {
+      backgroundColor: theme.palette.primary.main,
+      opacity: 0.9,
+    },
+    "& .MuiSvgIcon-root": { color: '#fff', fontSize: 18 },
+  },
 }));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const classes = useStyles({ drawerOpen });
   
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -300,11 +245,22 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { user } = useContext(AuthContext);
 
+  const wsLogoUrl = user?.company?.settings?.find?.(s => s.key === "wsLogoUrl")?.value || null;
+
   const theme = useTheme();
   const { colorMode } = useContext(ColorModeContext);
+  const crmTheme = useContext(ColorModeContext);
+
+  useEffect(() => {
+    const settings = user && user.company && user.company.settings;
+    const colorSetting = settings && settings.find(function(s) { return s.key === "wsPrimaryColor"; });
+    const color = colorSetting && colorSetting.value;
+    if (color && crmTheme.setPrimaryColor) crmTheme.setPrimaryColor(color);
+  }, [user]);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
   const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   const { dateToClient } = useDate();
 
@@ -327,6 +283,18 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       setDrawerVariant("permanent");
     }
   }, [drawerOpen]);
+
+  useEffect(() => {
+    const fetchOnlineUsers = async () => {
+      try {
+        const { data } = await api.get("/users/list");
+        setOnlineUsers((Array.isArray(data) ? data : []).filter(u => u.online));
+      } catch (_) {}
+    };
+    fetchOnlineUsers();
+    const interval = setInterval(fetchOnlineUsers, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
@@ -410,78 +378,82 @@ const LoggedInLayout = ({ children, themeToggle }) => {
     return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
+  const stringToColor = (str) => {
+    if (!str) return "#6B63FF";
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    const h = hash % 360;
+    return `hsl(${Math.abs(h)}, 55%, 45%)`;
+  };
+
   if (loading) {
     return <BackdropLoading />;
   }
 
   return (
     <div className={classes.root}>
-      <Drawer
-        variant={drawerVariant}
-        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
-        classes={{
-          paper: clsx(
-            classes.drawerPaper,
-            !drawerOpen && classes.drawerPaperClose
-          ),
-        }}
-        open={drawerOpen}
-      >
-        <div className={classes.toolbarIcon}>
-          <img src={logo} className={classes.logo} alt="logo" />
-        </div>
-        
-        <div className={classes.listWrapper}>
-          <List className={classes.containerWithScroll}>
-            <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
+
+      {/* ── SIDEBAR ── */}
+      <div className={classes.sidebar}>
+        <div className={classes.sidebarNav}>
+          <List disablePadding>
+            <MainListItems drawerClose={drawerClose} collapsed={false} />
           </List>
-          
-          {drawerOpen && (
-            <>
-              <Typography className={classes.versionInfo}>
-                v8.0.1
-              </Typography>
-            </>
-          )}
         </div>
-      </Drawer>
-      
-      <UserModal
-        open={userModalOpen}
-        onClose={() => setUserModalOpen(false)}
-        userId={user?.id}
-      />
-      
-      <AppBar
-        position="fixed"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
-        elevation={0}
-      >
-        <Toolbar className={classes.toolbar}>
-          <Typography
-            component="h1"
-            variant="h6"
-            color="inherit"
-            noWrap
-            className={classes.title}
-          >
-            {greaterThenSm && user?.profile === "admin" && user?.company?.dueDate ? (
-              <>
-                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>! ({i18n.t("mainDrawer.appBar.greeting.active")} {dateToClient(user?.company?.dueDate)})
-              </>
-            ) : (
-              <>
-                {i18n.t("mainDrawer.appBar.greeting.hello")} <b>{user.name}</b>, {i18n.t("mainDrawer.appBar.greeting.welcome")} <b>{user?.company?.name}</b>!
-              </>
-            )}
-          </Typography>
-          
+
+        <div className={classes.sidebarBottom}>
+          <Typography className={classes.versionInfo}>v8.0.1</Typography>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL ── */}
+      <div className={classes.rightPanel}>
+
+        {/* HEADER */}
+        <div className={classes.header}>
+          {window.self !== window.top && (
+            <Button
+              className={classes.openInNewButton}
+              startIcon={<OpenInNewOutlinedIcon />}
+              onClick={() => window.open(window.location.href, '_blank')}
+            >
+              Abrir em nova aba
+            </Button>
+          )}
+
+          <Box flex={1} />
+
           <Box display="flex" alignItems="center">
+
+            {onlineUsers.length > 0 && (
+              <Box display="flex" alignItems="center" mr={0.5} ml={0.5} style={{ paddingLeft: 10 }}>
+                {onlineUsers.slice(0, 4).map((u) => (
+                  <Tooltip key={u.id} title={u.name}>
+                    <Badge
+                      overlap="circle"
+                      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                      badgeContent={<span className={classes.onlineDot} />}
+                    >
+                      {u.avatarUrl ? (
+                        <Avatar className={classes.onlineAvatar} src={u.avatarUrl} alt={u.name} />
+                      ) : (
+                        <Avatar className={classes.onlineAvatar} style={{ backgroundColor: stringToColor(u.name) }}>
+                          {getUserInitials(u.name)}
+                        </Avatar>
+                      )}
+                    </Badge>
+                  </Tooltip>
+                ))}
+                {onlineUsers.length > 4 && (
+                  <Tooltip title={onlineUsers.slice(4).map(u => u.name).join(", ")}>
+                    <div className={classes.overflowChip}>+{onlineUsers.length - 4}</div>
+                  </Tooltip>
+                )}
+              </Box>
+            )}
+
             <Tooltip title={i18n.t("mainDrawer.appBar.language")}>
-              <IconButton
-                className={classes.iconButton}
-                onClick={handlemenuLanguage}
-              >
+              <IconButton className={classes.iconButton} onClick={handlemenuLanguage}>
                 <TranslateOutlinedIcon className={classes.iconButtonLabel} />
               </IconButton>
             </Tooltip>
@@ -489,44 +461,26 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               id="menu-appbar-language"
               anchorEl={anchorElLanguage}
               getContentAnchorEl={null}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
               open={menuLanguageOpen}
               onClose={handleCloseMenuLanguage}
             >
-              <MenuItem>
-                <LanguageControl />
-              </MenuItem>
+              <MenuItem><LanguageControl /></MenuItem>
             </Menu>
-            
+
             <Tooltip title={theme.mode === 'dark' ? i18n.t("mainDrawer.appBar.lightMode") : i18n.t("mainDrawer.appBar.darkMode")}>
-              <IconButton
-                className={classes.iconButton}
-                onClick={toggleColorMode}
-              >
-                {theme.mode === 'dark' ? 
-                  <WbSunnyOutlinedIcon className={classes.iconButtonLabel} /> : 
-                  <NightsStayOutlinedIcon className={classes.iconButtonLabel} />
-                }
+              <IconButton className={classes.iconButton} onClick={toggleColorMode}>
+                {theme.mode === 'dark'
+                  ? <WbSunnyOutlinedIcon className={classes.iconButtonLabel} />
+                  : <NightsStayOutlinedIcon className={classes.iconButtonLabel} />}
               </IconButton>
             </Tooltip>
 
-            <NotificationsVolume
-              setVolume={setVolume}
-              volume={volume}
-            />
+            <NotificationsVolume setVolume={setVolume} volume={volume} />
 
             <Tooltip title={i18n.t("mainDrawer.appBar.refresh")}>
-              <IconButton
-                className={classes.iconButton}
-                onClick={handleRefreshPage}
-              >
+              <IconButton className={classes.iconButton} onClick={handleRefreshPage}>
                 <SyncOutlinedIcon className={classes.iconButtonLabel} />
               </IconButton>
             </Tooltip>
@@ -535,67 +489,20 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               <NotificationsPopOver volume={volume} />
             )}
 
-            <AnnouncementsPopover />
-
-            <ChatPopover 
-              iconButton={
-                <Tooltip title="Chat">
-                  <IconButton className={classes.iconButton}>
-                    <ChatBubbleOutlineIcon className={classes.iconButtonLabel} style={{ color: theme.palette.primary.main }} />
-                  </IconButton>
-                </Tooltip>
-              }
-            />
-
-            <Tooltip title={i18n.t("mainDrawer.appBar.user.profile")}>
-              <IconButton
-                className={classes.iconButton}
-                onClick={handleMenu}
-              >
-                <AccountBoxOutlinedIcon className={classes.iconButtonLabel} />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              getContentAnchorEl={null}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={menuOpen}
-              onClose={handleCloseMenu}
-            >
-              <MenuItem onClick={handleOpenUserModal}>
-                <PersonOutlineIcon fontSize="small" style={{ marginRight: 8 }} />
-                {i18n.t("mainDrawer.appBar.user.profile")}
-              </MenuItem>
-              <MenuItem onClick={handleClickLogout}>
-                <ExitToAppOutlinedIcon fontSize="small" style={{ marginRight: 8 }} />
-                {i18n.t("mainDrawer.appBar.user.logout")}
-              </MenuItem>
-            </Menu>
           </Box>
-        </Toolbar>
-      </AppBar>
-      
-      {/* Botão flutuante do menu */}
-      <Tooltip title={drawerOpen ? "Recolher menu" : "Expandir menu"}>
-        <IconButton
-          className={classes.menuButton}
-          onClick={handleDrawerToggle}
-        >
-          {drawerOpen ? <ChevronLeftIcon fontSize="small" /> : <MenuOpenIcon fontSize="small" />}
-        </IconButton>
-      </Tooltip>
-      
-      <main className={classes.content}>
-        {children ? children : null}
-      </main>
+        </div>
+
+        {/* CONTENT */}
+        <main className={classes.content}>
+          {children ? children : null}
+        </main>
+      </div>
+
+      <UserModal
+        open={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        userId={user && user.id}
+      />
     </div>
   );
 };

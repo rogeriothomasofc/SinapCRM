@@ -710,13 +710,6 @@ const FlowBuilderConfig = () => {
       bgColor: "#EFEBE9",
     },
     {
-      icon: <Box component="img" src={typebotIcon} sx={{ width: 18, height: 18 }} />,
-      name: "TypeBot",
-      type: "typebot",
-      color: "#3F51B5",
-      bgColor: "#E8EAF6",
-    },
-    {
       icon: <SiOpenai style={{ fontSize: 18 }} />,
       name: "OpenAI",
       type: "openai",
@@ -1382,7 +1375,8 @@ const FlowBuilderConfig = () => {
                         {item.label}
                       </Typography>
                       <Switch size="small" color="primary" checked={triggerConfig[item.key]}
-                        onChange={() => {}} onClick={e => e.stopPropagation()} />
+                        onChange={e => { e.stopPropagation(); setTriggerConfig(p => { const next = !p[item.key]; return { ...p, any: false, keyword: false, firstOfDay: false, firstEver: false, [item.key]: next }; }); }}
+                        onClick={e => e.stopPropagation()} />
                     </Box>
                   ))}
 
@@ -1401,7 +1395,8 @@ const FlowBuilderConfig = () => {
                         Contém palavras-chaves
                       </Typography>
                       <Switch size="small" color="primary" checked={triggerConfig.keyword}
-                        onChange={() => {}} onClick={e => e.stopPropagation()} />
+                        onChange={e => { e.stopPropagation(); setTriggerConfig(p => ({ ...p, keyword: !p.keyword, any: false, firstOfDay: false, firstEver: false })); }}
+                        onClick={e => e.stopPropagation()} />
                     </Box>
 
                     {triggerConfig.keyword && (
@@ -1543,7 +1538,8 @@ const FlowBuilderConfig = () => {
                         {item.label}
                       </Typography>
                       <Switch size="small" color="primary" checked={rulesConfig[item.key]}
-                        onChange={() => {}} onClick={e => e.stopPropagation()} />
+                        onChange={e => { e.stopPropagation(); setRulesConfig(p => ({ ...p, [item.key]: !p[item.key] })); }}
+                        onClick={e => e.stopPropagation()} />
                     </Box>
                   ))}
                 </Box>
@@ -1581,7 +1577,8 @@ const FlowBuilderConfig = () => {
                         {item.label}
                       </Typography>
                       <Switch size="small" color="primary" checked={rulesConfig[item.key]}
-                        onChange={() => {}} onClick={e => e.stopPropagation()} />
+                        onChange={e => { e.stopPropagation(); setRulesConfig(p => { if (item.exclusive) { return { ...p, noCrm: false, onlyCrm: false, [item.key]: !p[item.key] }; } return { ...p, [item.key]: !p[item.key] }; }); }}
+                        onClick={e => e.stopPropagation()} />
                     </Box>
                   ))}
                 </Box>
@@ -1619,7 +1616,8 @@ const FlowBuilderConfig = () => {
                         {item.label}
                       </Typography>
                       <Switch size="small" color="primary" checked={rulesConfig[item.key]}
-                        onChange={() => {}} onClick={e => e.stopPropagation()} />
+                        onChange={e => { e.stopPropagation(); setRulesConfig(p => { if (item.exclusive) { return { ...p, noTags: false, onlyTags: false, [item.key]: !p[item.key] }; } return { ...p, [item.key]: !p[item.key] }; }); }}
+                        onClick={e => e.stopPropagation()} />
                     </Box>
                   ))}
                 </Box>

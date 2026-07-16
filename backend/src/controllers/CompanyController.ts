@@ -12,6 +12,7 @@ import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import UpdateSchedulesService from "../services/CompanyService/UpdateSchedulesService";
 import DeleteCompanyService from "../services/CompanyService/DeleteCompanyService";
 import FindAllCompaniesService from "../services/CompanyService/FindAllCompaniesService";
+import Setting from "../models/Setting";
 import { verify } from "jsonwebtoken";
 import User from "../models/User";
 import ShowPlanCompanyService from "../services/CompanyService/ShowPlanCompanyService";
@@ -160,6 +161,41 @@ export const listPlan = async (req: Request, res: Response): Promise<Response> =
     return res.status(200).json(company);
   }
 
+};
+
+// PUT /companies/update-by-env — atualiza nome/logo/cor de uma Company pelo WhatsApp Store (envTokenAuth)
+export const updateByEnv = async (req: Request, res: Response): Promise<Response> => {
+  const { companyId, name, logoUrl, primaryColor } = req.body;
+
+  if (!companyId) {
+    return res.status(400).json({ error: "companyId obrigatório" });
+  }
+
+  const company = await Company.findByPk(companyId);
+  if (!company) {
+    return res.status(404).json({ error: "Company não encontrada" });
+  }
+
+  if (name) {
+    await company.update({ name });
+  }
+
+  const brandingFields = [
+    { key: "wsLogoUrl", value: logoUrl },
+    { key: "wsPrimaryColor", value: primaryColor },
+  ];
+
+  for (const { key, value } of brandingFields) {
+    if (value !== undefined) {
+      const [setting, created] = await Setting.findOrCreate({
+        where: { companyId: company.id, key },
+        defaults: { companyId: company.id, key, value: value || "" },
+      });
+      if (!created) await setting.update({ value: value || "" });
+    }
+  }
+
+  return res.status(200).json({ ok: true });
 };
 
 export const indexPlan = async (req: Request, res: Response): Promise<Response> => {

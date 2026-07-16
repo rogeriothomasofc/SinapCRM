@@ -226,7 +226,7 @@ async function handleVerifySchedules(job) {
         sentAt: null,
         sendAt: {
           [Op.gte]: moment().format("YYYY-MM-DD HH:mm:ss"),
-          [Op.lte]: moment().add("300", "seconds").format("YYYY-MM-DD HH:mm:ss")
+          [Op.lte]: moment().add("70", "seconds").format("YYYY-MM-DD HH:mm:ss")
         }
       },
       include: [{ model: Contact, as: "contact" }]

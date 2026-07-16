@@ -6,7 +6,8 @@ import {
   Tooltip, IconButton, CircularProgress
 } from "@material-ui/core";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
-import { Done, Close, Replay, Visibility, Android } from '@material-ui/icons';
+import { green } from "@material-ui/core/colors";
+import { PanTool, CheckCircle, Replay, Visibility, Android } from '@material-ui/icons';
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -114,7 +115,7 @@ const useStyles = makeStyles((theme) => ({
     gap: 3
   },
   actionBtn: {
-    padding: 4,
+    padding: 3,
     backgroundColor: theme.palette.type === 'dark' 
       ? theme.palette.grey[800] 
       : theme.palette.primary.main,
@@ -139,6 +140,16 @@ const useStyles = makeStyles((theme) => ({
         ? theme.palette.primary.light 
         : "white",
     }
+  },
+  resolveBtn: {
+    padding: 3,
+    color: theme.palette.type === 'dark' ? green[400] : green[600],
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.type === 'dark' ? "rgba(76,175,80,0.12)" : "rgba(56,142,60,0.08)",
+      transform: "scale(1.1)",
+    },
+    "& .MuiSvgIcon-root": { color: theme.palette.type === 'dark' ? green[400] : green[600] }
   },
   icon: {
     fontSize: "1rem"
@@ -320,7 +331,7 @@ const TicketListItemCustom = ({ ticket }) => {
                 className={classes.actionBtn}
                 onClick={(e) => { e.stopPropagation(); handleAction("accept", ticket.id); }}
               >
-                <Done className={classes.icon} />
+                <PanTool style={{ fontSize: "0.75rem" }} />
               </IconButton>
             </Tooltip>
           )}
@@ -329,10 +340,10 @@ const TicketListItemCustom = ({ ticket }) => {
             <Tooltip title={i18n.t("ticketsList.buttons.closed")}>
               <IconButton
                 size="small"
-                className={classes.actionBtn}
+                className={classes.resolveBtn}
                 onClick={(e) => { e.stopPropagation(); handleAction("close", ticket.id); }}
               >
-                <Close className={classes.icon} />
+                <CheckCircle style={{ fontSize: "1.1rem" }} />
               </IconButton>
             </Tooltip>
           )}

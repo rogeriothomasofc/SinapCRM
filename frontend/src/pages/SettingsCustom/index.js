@@ -3,27 +3,17 @@ import { useHistory } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
-import { makeStyles, Paper, Tabs, Tab, Grid, Box, Typography, Divider } from "@material-ui/core";
+import { makeStyles, Paper, Grid, Box, Typography, Divider } from "@material-ui/core";
 
-import TabPanel from "../../components/TabPanel";
 import SchedulesForm from "../../components/SchedulesForm";
-import CompaniesManager from "../../components/CompaniesManager";
-import PlansManager from "../../components/PlansManager";
-import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
-import PaymentSettings from "../../components/Settings/PaymentSettings";
-import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 
 import SyncOutlinedIcon from "@material-ui/icons/SyncOutlined";
 import PeopleOutlinedIcon from "@material-ui/icons/PeopleOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import LabelOutlinedIcon from "@material-ui/icons/LabelOutlined";
-import AttachFileOutlinedIcon from "@material-ui/icons/AttachFileOutlined";
 import AllInclusiveOutlinedIcon from "@material-ui/icons/AllInclusiveOutlined";
-import DeviceHubOutlinedIcon from "@material-ui/icons/DeviceHubOutlined";
-import CodeOutlinedIcon from "@material-ui/icons/CodeOutlined";
-import AttachMoneyOutlinedIcon from "@material-ui/icons/AttachMoneyOutlined";
-import HelpOutlineOutlinedIcon from "@material-ui/icons/HelpOutlineOutlined";
+import EventOutlinedIcon from "@material-ui/icons/EventOutlined";
 import TuneOutlinedIcon from "@material-ui/icons/TuneOutlined";
 
 import { i18n } from "../../translate/i18n.js";
@@ -39,19 +29,8 @@ const useStyles = makeStyles((theme) => ({
     ...theme.scrollbarStyles,
     overflowY: "scroll",
     flex: 1,
+    padding: "24px",
   },
-  tab: { backgroundColor: theme.palette.options, borderRadius: 4 },
-  paper: {
-    ...theme.scrollbarStyles,
-    overflowY: "scroll",
-    padding: theme.spacing(2),
-    display: "flex",
-    alignItems: "center",
-    width: "100%",
-  },
-  container: { width: "100%", maxHeight: "100%" },
-
-  // Hub styles
   hubSection: { marginBottom: theme.spacing(3) },
   sectionLabel: {
     fontSize: 11,
@@ -102,7 +81,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 13,
     fontWeight: 700,
     color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(1.5),
+    marginBottom: theme.spacing(2),
   },
 }));
 
@@ -122,7 +101,6 @@ const NavCard = ({ icon, label, description, onClick }) => {
 const SettingsCustom = () => {
   const classes = useStyles();
   const history = useHistory();
-  const [tab, setTab] = useState("options");
   const [schedules, setSchedules] = useState([]);
   const [company, setCompany] = useState({});
   const [loading, setLoading] = useState(false);
@@ -166,31 +144,6 @@ const SettingsCustom = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTabChange = (event, newValue) => {
-    async function findData() {
-      setLoading(true);
-      try {
-        const companyId = localStorage.getItem("companyId");
-        const company = await find(companyId);
-        const settingList = await getAllSettings();
-        setCompany(company);
-        setSchedules(company.schedules);
-        setSettings(settingList);
-        if (Array.isArray(settingList)) {
-          const scheduleType = settingList.find((d) => d.key === "scheduleType");
-          if (scheduleType) setSchedulesEnabled(scheduleType.value === "company");
-        }
-        const u = await getCurrentUserInfo();
-        setCurrentUser(u);
-      } catch (e) {
-        toast.error(e);
-      }
-      setLoading(false);
-    }
-    findData();
-    setTab(newValue);
-  };
-
   const handleSubmitSchedules = async (data) => {
     setLoading(true);
     try {
@@ -203,43 +156,23 @@ const SettingsCustom = () => {
     setLoading(false);
   };
 
-  const isSuper = () => currentUser.super;
   const go = (path) => history.push(path);
 
   const HUB_SECTIONS = [
     {
-      label: "WhatsApp",
-      items: [
-        { icon: <SyncOutlinedIcon />, label: "Conexões", desc: "Gerencie seus números conectados", path: "/connections", always: true },
-      ],
-    },
-    {
-      label: "Equipe",
-      items: [
-        { icon: <PeopleOutlinedIcon />, label: "Usuários", desc: "Atendentes e permissões", path: "/users", always: true },
-        { icon: <AccountTreeOutlinedIcon />, label: "Setores", desc: "Filas de atendimento", path: "/queues", always: true },
-      ],
-    },
-    {
       label: "Atendimento",
       items: [
+        { icon: <SyncOutlinedIcon />, label: "Conexões", desc: "Números de WhatsApp conectados", path: "/connections", always: true },
+        { icon: <AccountTreeOutlinedIcon />, label: "Setores", desc: "Filas de atendimento", path: "/queues", always: true },
         { icon: <LabelOutlinedIcon />, label: "Etiquetas", desc: "Tags e abas do CRM", path: "/tags", always: true },
-        { icon: <AttachFileOutlinedIcon />, label: "Arquivos", desc: "Biblioteca de arquivos", path: "/files", always: true },
+        { icon: <EventOutlinedIcon />, label: "Horários", desc: "Horário de funcionamento do atendimento", path: null, action: "schedules", always: false },
       ],
     },
     {
       label: "Automação",
       items: [
-        { icon: <AllInclusiveOutlinedIcon />, label: "IA / Prompts", desc: "Configurações de inteligência artificial", path: "/prompts", show: planConfig.useOpenAi },
-        { icon: <DeviceHubOutlinedIcon />, label: "Integrações", desc: "Integrações com sistemas externos", path: "/queue-integration", show: planConfig.useIntegrations },
-        { icon: <CodeOutlinedIcon />, label: "API Externa", desc: "Acesso via API para envio de mensagens", path: "/messages-api", show: planConfig.useExternalApi },
-      ],
-    },
-    {
-      label: "Sistema",
-      items: [
-        { icon: <AttachMoneyOutlinedIcon />, label: "Financeiro", desc: "Assinatura e pagamentos", path: "/financeiro", always: true },
-        { icon: <HelpOutlineOutlinedIcon />, label: "Ajuda", desc: "Tutoriais e suporte", path: "/helps", always: true },
+        { icon: <AllInclusiveOutlinedIcon />, label: "IA / Prompts", desc: "Configurações de inteligência artificial", path: "/prompts", always: planConfig.useOpenAi },
+        { icon: <AllInclusiveOutlinedIcon />, label: "Automações WhatsApp", desc: "Templates de mensagens automáticas da loja", path: "/ws-automations", always: true },
       ],
     },
   ];
@@ -250,84 +183,45 @@ const SettingsCustom = () => {
         <Title>{i18n.t("settings.title")}</Title>
       </MainHeader>
 
-      <Paper className={classes.mainPaper} elevation={1} style={{ padding: "20px 24px" }}>
+      <Paper className={classes.mainPaper} elevation={1}>
 
-        {/* Cards de navegação */}
-        {HUB_SECTIONS.map((section) => {
-          const visibleItems = section.items.filter(item => item.always || item.show);
-          if (!visibleItems.length) return null;
-          return (
-            <Box key={section.label} className={classes.hubSection}>
-              <Typography className={classes.sectionLabel}>{section.label}</Typography>
-              <Grid container spacing={2}>
-                {visibleItems.map((item) => (
-                  <Grid item xs={12} sm={6} md={4} key={item.path}>
-                    <NavCard
-                      icon={item.icon}
-                      label={item.label}
-                      description={item.desc}
-                      onClick={() => go(item.path)}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          );
-        })}
+        <Options
+          settings={settings}
+          scheduleTypeChanged={(value) => setSchedulesEnabled(value === "company")}
+        />
 
         <Divider className={classes.hubDivider} />
 
-        {/* Configurações Gerais (abas existentes) */}
-        <Box style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <TuneOutlinedIcon style={{ fontSize: 18, color: "#888" }} />
-          <Typography className={classes.generalTitle}>CONFIGURAÇÕES GERAIS</Typography>
-        </Box>
+        <Grid container spacing={2} style={{ marginBottom: 8 }}>
+          {HUB_SECTIONS.flatMap((section) =>
+            section.items.filter((item) => item.always)
+          ).map((item) => (
+            <Grid item xs={12} sm={6} md={4} key={item.label}>
+              <NavCard
+                icon={item.icon}
+                label={item.label}
+                description={item.desc}
+                onClick={() => item.path ? go(item.path) : null}
+              />
+            </Grid>
+          ))}
+        </Grid>
 
-        <Tabs
-          value={tab}
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          onChange={handleTabChange}
-          className={classes.tab}
-        >
-          <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
-          {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
-          {isSuper() ? <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} /> : null}
-          {isSuper() ? <Tab label="Pagamentos" value={"payments"} /> : null}
-        </Tabs>
+        {schedulesEnabled && (
+          <Box mt={4}>
+            <Divider style={{ marginBottom: 24 }} />
+            <Box style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <EventOutlinedIcon style={{ fontSize: 18, color: "#888" }} />
+              <Typography className={classes.generalTitle}>HORÁRIOS DE ATENDIMENTO</Typography>
+            </Box>
+            <SchedulesForm
+              loading={loading}
+              onSubmit={handleSubmitSchedules}
+              initialValues={schedules}
+            />
+          </Box>
+        )}
 
-        <Paper className={classes.paper} elevation={0}>
-          <TabPanel className={classes.container} value={tab} name={"schedules"}>
-            <SchedulesForm loading={loading} onSubmit={handleSubmitSchedules} initialValues={schedules} />
-          </TabPanel>
-          <OnlyForSuperUser user={currentUser} yes={() => (
-            <TabPanel className={classes.container} value={tab} name={"companies"}>
-              <CompaniesManager />
-            </TabPanel>
-          )} />
-          <OnlyForSuperUser user={currentUser} yes={() => (
-            <TabPanel className={classes.container} value={tab} name={"plans"}>
-              <PlansManager />
-            </TabPanel>
-          )} />
-          <OnlyForSuperUser user={currentUser} yes={() => (
-            <TabPanel className={classes.container} value={tab} name={"helps"}>
-              <HelpsManager />
-            </TabPanel>
-          )} />
-          <TabPanel className={classes.container} value={tab} name={"options"}>
-            <Options settings={settings} scheduleTypeChanged={(value) => setSchedulesEnabled(value === "company")} />
-          </TabPanel>
-          <OnlyForSuperUser user={currentUser} yes={() => (
-            <TabPanel className={classes.container} value={tab} name={"payments"}>
-              <PaymentSettings />
-            </TabPanel>
-          )} />
-        </Paper>
       </Paper>
     </MainContainer>
   );

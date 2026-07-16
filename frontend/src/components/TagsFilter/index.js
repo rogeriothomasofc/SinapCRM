@@ -5,7 +5,7 @@ import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 
-export function TagsFilter({ onFiltered }) {
+export function TagsFilter({ onFiltered, compact }) {
   const [tags, setTags] = useState([]);
   const [selecteds, setSelecteds] = useState([]);
 
@@ -31,7 +31,7 @@ export function TagsFilter({ onFiltered }) {
   };
 
   return (
-    <Box style={{ padding: 10 }}>
+    <Box style={{ padding: compact ? 0 : 10 }}>
       <Autocomplete
         multiple
         size="small"

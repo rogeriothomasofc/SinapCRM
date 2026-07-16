@@ -69,7 +69,7 @@ const PromptSchema = Yup.object().shape({
 
 const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
-    const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
+    const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
     const [showApiKey, setShowApiKey] = useState(false);
     const importRef = useRef(null);
 
@@ -107,7 +107,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const initialState = {
         name: "",
         prompt: "",
-        model: "gpt-3.5-turbo-1106",
+        model: "gpt-4o-mini",
         maxTokens: 100,
         temperature: 1,
         apiKey: "",
@@ -140,7 +140,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
     const handleClose = () => {
         setPrompt(initialState);
-        setSelectedModel("gpt-3.5-turbo-1106");
+        setSelectedModel("gpt-4o-mini");
         onClose();
     };
 
@@ -259,11 +259,14 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                             onChange={handleChangeModel}
                                             multiple={false}
                                         >
-                                            <MenuItem key={"gpt-3.5"} value={"gpt-3.5-turbo-1106"}>
-                                                GPT 3.5 turbo
+                                            <MenuItem key={"gpt-4o-mini"} value={"gpt-4o-mini"}>
+                                                GPT-4o mini — rápido e econômico
                                             </MenuItem>
-                                            <MenuItem key={"gpt-4"} value={"gpt-4o-mini"}>
-                                                GPT 4.0
+                                            <MenuItem key={"gpt-4.1-mini"} value={"gpt-4.1-mini"}>
+                                                GPT-4.1 mini — mais recente, boa relação custo/qualidade
+                                            </MenuItem>
+                                            <MenuItem key={"gpt-4o"} value={"gpt-4o"}>
+                                                GPT-4o — respostas mais elaboradas
                                             </MenuItem>
                                         </Select>
                                     </FormControl>

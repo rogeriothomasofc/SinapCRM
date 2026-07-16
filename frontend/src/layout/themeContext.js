@@ -1,32 +1,32 @@
 import React, { createContext, useState, useMemo } from 'react';
-import { 
-  createTheme, 
+import {
+  createTheme,
   ThemeProvider as MuiThemeProvider
 } from '@material-ui/core/styles';
 
-// Create the color mode context
+const DEFAULT_PRIMARY = '#682ee2';
+
 export const ColorModeContext = createContext({
   toggleColorMode: () => {},
+  setPrimaryColor: () => {},
   mode: 'light'
 });
 
 // Main theme provider component
 export const ThemeProvider = ({ children }) => {
-  // Get the user's preferred color scheme from localStorage or use system preference
   const getInitialMode = () => {
     const savedMode = localStorage.getItem('themeMode');
-    if (savedMode) {
-      return savedMode;
-    }
-    // Check system preference
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches 
-      ? 'dark' 
+    if (savedMode) return savedMode;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
       : 'light';
   };
 
   const [mode, setMode] = useState(getInitialMode);
+  const [primaryColor, setPrimaryColorState] = useState(
+    () => localStorage.getItem('wsPrimaryColor') || DEFAULT_PRIMARY
+  );
 
-  // Color mode toggler function
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
@@ -36,10 +36,18 @@ export const ThemeProvider = ({ children }) => {
           return newMode;
         });
       },
+      setPrimaryColor: (color) => {
+        if (color) {
+          localStorage.setItem('wsPrimaryColor', color);
+          setPrimaryColorState(color);
+        }
+      },
       mode,
     }),
     [mode],
   );
+
+  const primary = primaryColor || DEFAULT_PRIMARY;
 
   // Generate theme based on current mode
   const theme = useMemo(
@@ -49,9 +57,9 @@ export const ThemeProvider = ({ children }) => {
           type: mode,
           mode: mode,
           primary: {
-            main: mode === 'light' ? '#682ee2' : '#8955ff',
-            light: '#9d7aea',
-            dark: '#4d21a9',
+            main: primary,
+            light: primary,
+            dark: primary,
             contrastText: '#ffffff',
           },
           secondary: {
@@ -93,8 +101,8 @@ export const ThemeProvider = ({ children }) => {
           dark: {
             main: mode === 'light' ? '#333333' : '#ffffff',
           },
-          fancyBackground: mode === 'light' ? '#f5f5f7' : '#121212',
-          barraSuperior: mode === 'light' ? '#682ee2' : '#1a1a1a',
+          fancyBackground: mode === 'light' ? '#f5f6fb' : '#121212',
+          barraSuperior: mode === 'light' ? primary : '#1a1a1a',
         },
         typography: {
           fontFamily: [
@@ -185,7 +193,7 @@ export const ThemeProvider = ({ children }) => {
           },
           MuiAppBar: {
             colorPrimary: {
-              backgroundColor: mode === 'light' ? '#682ee2' : '#1a1a1a',
+              backgroundColor: mode === 'light' ? primary : '#1a1a1a',
             },
           },
           MuiDrawer: {
@@ -276,7 +284,7 @@ export const ThemeProvider = ({ children }) => {
         // Add the mode property to the theme
         mode,
       }),
-    [mode],
+    [mode, primary],
   );
 
   return (

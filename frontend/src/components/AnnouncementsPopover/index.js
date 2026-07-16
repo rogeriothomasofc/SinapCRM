@@ -36,6 +36,17 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  iconButton: {
+    width: 40,
+    height: 40,
+    padding: 0,
+    margin: "0 4px",
+    color: "#fff",
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 12,
+    "&:hover": { backgroundColor: theme.palette.primary.main, opacity: 0.9 },
+    "& .MuiSvgIcon-root": { fontSize: 18, color: "#fff" },
+  },
 }));
 
 function AnnouncementDialog({ announcement, open, handleClose }) {
@@ -245,10 +256,9 @@ export default function AnnouncementsPopover() {
         handleClose={() => setShowAnnouncementDialog(false)}
       />
       <IconButton
-        variant="contained"
         aria-describedby={id}
         onClick={handleClick}
-        style={{ color: "white" }}
+        className={classes.iconButton}
       >
         <Badge
           color="secondary"

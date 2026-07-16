@@ -11,7 +11,7 @@ const useStyles = makeStyles(theme => ({
 	chatContainer: {
 		flex: 1,
 		padding: 0,
-		height: "calc(100vh - 50px)", // Ajustado para descontar header/navbar
+		height: "100%",
 		overflow: "hidden",
 		display: "flex",
 		flexDirection: "column",

@@ -222,25 +222,16 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		gap: theme.spacing(1),
-		height: 36,
-		"& .MuiFormControl-root": {
-			minWidth: 140,
-			maxWidth: 240,
-		},
 		"& .MuiOutlinedInput-root": {
-			height: 28,
+			height: 32,
 			fontSize: "0.813rem",
 		},
 		"& .MuiInputLabel-root": {
 			fontSize: "0.813rem",
-			transform: "translate(16px, 4px) scale(1)",
+			transform: "translate(14px, 8px) scale(1)",
 			"&.MuiInputLabel-shrink": {
-				transform: "translate(16px, -7px) scale(0.7)",
+				transform: "translate(14px, -7px) scale(0.7)",
 			},
-		},
-		"& .MuiSelect-select": {
-			paddingTop: 3,
-			paddingBottom: 3,
 		},
 	},
 
@@ -601,36 +592,32 @@ const TicketsManagerTabs = () => {
 					
 					<TabPanel value={tab} name="search" className={classes.tabPanelContainer}>
 						<div className={classes.filterSection}>
-							<FilterListIcon className={classes.filterIcon} color="action" />
-							<Typography variant="caption" style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+							<FilterListIcon className={classes.filterIcon} color="action" style={{ flexShrink: 0 }} />
+							<Typography variant="caption" style={{ fontWeight: 600, fontSize: "0.813rem", whiteSpace: "nowrap", flexShrink: 0 }}>
 								Filtros:
 							</Typography>
-							
-							<div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-								<TagsFilter onFiltered={handleSelectedTags} />
 
-								{profile === "admin" && (
-									<>
-										<Divider orientation="vertical" flexItem style={{ height: 20, alignSelf: "center" }} />
-										<UsersFilter onFiltered={handleSelectedUsers} />
-									</>
-								)}
+							<div style={{ flex: 1, minWidth: 0 }}>
+								<TagsFilter onFiltered={handleSelectedTags} compact />
 							</div>
 
+							{profile === "admin" && (
+								<div style={{ flex: 1, minWidth: 0 }}>
+									<UsersFilter onFiltered={handleSelectedUsers} compact />
+								</div>
+							)}
+
 							{(selectedTags.length > 0 || selectedUsers.length > 0) && (
-								<>
-									<Divider orientation="vertical" flexItem style={{ height: 20, alignSelf: "center" }} />
-									<Button
-										size="small"
-										style={{ fontSize: "0.875rem", padding: "3px 8px", minHeight: 30 }}
-										onClick={() => {
-											setSelectedTags([]);
-											setSelectedUsers([]);
-										}}
-									>
-										Limpar
-									</Button>
-								</>
+								<Button
+									size="small"
+									style={{ fontSize: "0.75rem", padding: "2px 8px", flexShrink: 0 }}
+									onClick={() => {
+										setSelectedTags([]);
+										setSelectedUsers([]);
+									}}
+								>
+									Limpar
+								</Button>
 							)}
 						</div>
 						<TicketsList

@@ -19,6 +19,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ColorPicker from "../ColorPicker";
+import UserSelect from "../UserSelect";
 import {
   FormControl,
   Grid,
@@ -145,6 +146,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
   ]);
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [prompts, setPrompts] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -210,26 +212,43 @@ const QueueModal = ({ open, onClose, queueId }) => {
     };
   }, [queueId, open]);
 
+  useEffect(() => {
+    api.get("/users/list").then(({ data }) => {
+      if (queueId) {
+        setSelectedUserIds(
+          data.filter(u => u.queues?.some(q => q.id === queueId)).map(u => u.id)
+        );
+      } else {
+        setSelectedUserIds([]);
+      }
+    }).catch(() => {});
+  }, [queueId, open]);
+
   const handleClose = () => {
     onClose();
     setQueue(initialState);
+    setSelectedUserIds([]);
   };
 
   const handleSaveQueue = async (values) => {
     try {
+      let savedId;
       if (queueId) {
         await api.put(`/queue/${queueId}`, {
           ...values,
           schedules,
           promptId: selectedPrompt ? selectedPrompt : null,
         });
+        savedId = queueId;
       } else {
-        await api.post("/queue", {
+        const { data } = await api.post("/queue", {
           ...values,
           schedules,
           promptId: selectedPrompt ? selectedPrompt : null,
         });
+        savedId = data.id;
       }
+      await api.put(`/queue/${savedId}/users`, { userIds: selectedUserIds });
       toast.success(i18n.t("queueModal.toasts.success"));
       handleClose();
     } catch (err) {
@@ -458,6 +477,11 @@ const QueueModal = ({ open, onClose, queueId }) => {
                         />
                       )}
                     </div>
+                    <UserSelect
+                      selectedUserIds={selectedUserIds}
+                      onChange={setSelectedUserIds}
+                      title="Atendentes deste setor"
+                    />
                     <QueueOptions queueId={queueId} />
                   </DialogContent>
                   <DialogActions>

@@ -370,8 +370,10 @@ const Schedules = () => {
     const now = moment();
     const scheduleTime = moment(schedule.sendAt);
 
-    if (schedule.sent) {
-      return { label: "Enviado", color: "default" };
+    if (schedule.sentAt || schedule.status === "ENVIADA") {
+      return { label: "Enviado", color: "default", style: { backgroundColor: "#4caf50", color: "#fff" } };
+    } else if (schedule.status === "ERRO") {
+      return { label: "Erro", color: "error" };
     } else if (scheduleTime.isBefore(now)) {
       return { label: "Atrasado", color: "error" };
     } else if (scheduleTime.diff(now, "hours") < 1) {
@@ -513,6 +515,7 @@ const Schedules = () => {
                           color={status.color}
                           size="small"
                           className={classes.statusChip}
+                          style={status.style || {}}
                         />
                       </Box>
                     </Box>

@@ -61,6 +61,7 @@ import ShowQueueIntegrationService from "../QueueIntegrationServices/ShowQueueIn
 import { FlowBuilderModel } from "../../models/FlowBuilder";
 import { FlowDefaultModel } from "../../models/FlowDefault";
 import { FlowCampaignModel } from "../../models/FlowCampaign";
+import TicketTag from "../../models/TicketTag";
 import { IOpenAi } from "../../@types/openai";
 
 import { IConnections, INodes } from "../WebhookService/DispatchWebHookService";
@@ -469,13 +470,20 @@ const getSenderMessage = (
 const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const isGroup = msg.key.remoteJid.includes("g.us");
   const rawNumber = msg.key.remoteJid.replace(/\D/g, "");
+
+  // WhatsApp @lid JIDs are internal identifiers, not phone numbers.
+  // senderPn contains the real phone JID (e.g. 558191611139@s.whatsapp.net).
+  const lidJid = msg.key.remoteJid.endsWith("@lid");
+  const senderPn = (msg.key as any).senderPn as string | undefined;
+  const contactId = (lidJid && senderPn) ? senderPn : msg.key.remoteJid;
+
   return isGroup
     ? {
         id: getSenderMessage(msg, wbot),
         name: msg.pushName
       }
     : {
-        id: msg.key.remoteJid,
+        id: contactId,
         name: msg.key.fromMe ? rawNumber : msg.pushName
       };
 };
@@ -710,12 +718,31 @@ const handleOpenAi = async (
     limit: maxMessages
   });
 
+  // Busca contexto do catálogo WS (produtos + pedidos do cliente) e injeta no prompt
+  let wsContext = "";
+  if (process.env.WS_API_URL) {
+    wsContext = await new Promise<string>((resolve) => {
+      request(
+        {
+          method: "GET",
+          url: `${process.env.WS_API_URL}/api/crm-context?companyId=${ticket.companyId}&phone=${contact.number}`,
+          headers: { Authorization: `Bearer ${process.env.WS_ENV_TOKEN}` },
+          json: true,
+          timeout: 5000,
+        },
+        (_err: any, _res: any, body: any) => {
+          resolve(body?.context || "");
+        }
+      );
+    });
+  }
+
   const promptSystem = `Nas respostas utilize o nome ${sanitizeName(
     contact.name || "Amigo(a)"
   )} para identificar o cliente.\nSua resposta deve usar no máximo ${
     prompt.maxTokens
   } tokens e cuide para não truncar o final.\nSempre que possível, mencione o nome dele para ser mais personalizado o atendimento e mais educado. Quando a resposta requer uma transferência para o setor de atendimento, comece sua resposta com 'Ação: Transferir para o setor de atendimento'.\n
-  ${prompt.prompt}\n`;
+  ${prompt.prompt}\n${wsContext ? `\n${wsContext}` : ""}`;
 
   let messagesOpenAi: ChatCompletionRequestMessage[] = [];
 
@@ -1822,119 +1849,131 @@ const flowbuilderIntegration = async (
     }
   });
 
-  // Welcome flow
-  if (
-    !isFirstMsg &&
-    listPhrase.filter(item => item.phrase.toLowerCase() === body.toLowerCase()).length === 0
-  ) {
-    const flow = await FlowBuilderModel.findOne({
-      where: {
-        id: whatsapp.flowIdWelcome
-      }
+  const isGroup = (msg.key.remoteJid || "").endsWith("@g.us");
+  const bodyLower = (body || "").toLowerCase();
+  const phraseMatched = listPhrase.filter(item => item.phrase.toLowerCase() === bodyLower).length > 0;
+
+  // ── Trigger-based flow routing ────────────────────────────────────────────
+  // Busca todos os fluxos ativos da empresa que possuem trigger configurado.
+  // Se algum fizer match com a mensagem atual (e as regras passarem), ele é
+  // executado. Caso contrário cai no sistema legado (flowIdWelcome/flowIdNotPhrase).
+  const allActiveFlows = await FlowBuilderModel.findAll({
+    where: { company_id: companyId, active: true }
+  });
+  const triggerFlows = allActiveFlows.filter(f => f.flow?.["trigger"]);
+
+  let triggerFlowRan = false;
+
+  if (triggerFlows.length > 0 && !phraseMatched) {
+    const lastTicketDate = isFirstMsg ? new Date(isFirstMsg.updatedAt) : null;
+    const todayStr = new Date().toDateString();
+    const isToday = lastTicketDate && lastTicketDate.toDateString() === todayStr;
+
+    // Prioridade: keyword > firstEver > firstOfDay > any
+    let matchedFlow: typeof triggerFlows[0] | undefined;
+
+    matchedFlow = triggerFlows.find(f => {
+      const t = f.flow["trigger"];
+      return t.keyword &&
+        Array.isArray(t.keywords) &&
+        t.keywords.length > 0 &&
+        t.keywords.some((kw: string) => bodyLower.includes(kw.toLowerCase()));
     });
-    if (flow) {
-      const nodes: INodes[] = flow.flow["nodes"];
-      const connections: IConnections[] = flow.flow["connections"];
 
-      const mountDataContact = {
-        number: contact.number,
-        name: contact.name,
-        email: contact.email
-      };
+    if (!matchedFlow) {
+      matchedFlow = triggerFlows.find(f => f.flow["trigger"].firstEver && !isFirstMsg);
+    }
 
-      // const worker = new Worker("./src/services/WebhookService/WorkerAction.ts");
+    if (!matchedFlow) {
+      matchedFlow = triggerFlows.find(f => f.flow["trigger"].firstOfDay && isFirstMsg && !isToday);
+    }
 
-      // // Enviar as variáveis como parte da mensagem para o Worker
-      // console.log('DISPARO1')
-      // const data = {
-      //   idFlowDb: flowUse.flowIdWelcome,
-      //   companyId: ticketUpdate.companyId,
-      //   nodes: nodes,
-      //   connects: connections,
-      //   nextStage: flow.flow["nodes"][0].id,
-      //   dataWebhook: null,
-      //   details: "",
-      //   hashWebhookId: "",
-      //   pressKey: null,
-      //   idTicket: ticketUpdate.id,
-      //   numberPhrase: mountDataContact
-      // };
-      // worker.postMessage(data);
-      // worker.on("message", message => {
-      //   console.log(`Mensagem do worker: ${message}`);
-      // });
+    if (!matchedFlow) {
+      matchedFlow = triggerFlows.find(f => f.flow["trigger"].any && isFirstMsg);
+    }
 
-      await ActionsWebhookService(
-        whatsapp.id,
-        whatsapp.flowIdWelcome,
-        ticket.companyId,
-        nodes,
-        connections,
-        flow.flow["nodes"][0].id,
-        null,
-        "",
-        "",
-        null,
-        ticket.id,
-        mountDataContact,
-        msg
-      );
+    if (matchedFlow) {
+      const rules = matchedFlow.flow["rules"] || {};
+      let rulesPassed = true;
+
+      // Não responder grupos se allowGroups=false
+      if (!rules.allowGroups && isGroup) rulesPassed = false;
+
+      // Não responder se ticket está aberto (sendo atendido por humano)
+      if (rulesPassed && rules.noResponseIfOpen && ticket.status === "open") rulesPassed = false;
+
+      // Verificar horário comercial
+      if (rulesPassed && rules.onlyScheduledHours) {
+        const schedule = await VerifyCurrentSchedule(companyId);
+        if (!schedule || !schedule.inActivity) rulesPassed = false;
+      }
+
+      // Regras de etiqueta
+      if (rulesPassed && (rules.noTaggedContacts || rules.noTags || rules.onlyTags)) {
+        const ticketTags = await TicketTag.findAll({ where: { ticketId: ticket.id } });
+        const hasTags = ticketTags.length > 0;
+        if (rules.noTaggedContacts && hasTags) rulesPassed = false;
+        if (rules.noTags && hasTags) rulesPassed = false;
+        if (rules.onlyTags && !hasTags) rulesPassed = false;
+      }
+
+      if (rulesPassed) {
+        const nodes: INodes[] = matchedFlow.flow["nodes"];
+        const connections: IConnections[] = matchedFlow.flow["connections"];
+        const mountDataContact = {
+          number: contact.number,
+          name: contact.name,
+          email: contact.email
+        };
+        await ActionsWebhookService(
+          whatsapp.id,
+          matchedFlow.id,
+          ticket.companyId,
+          nodes,
+          connections,
+          matchedFlow.flow["nodes"][0].id,
+          null,
+          "",
+          "",
+          null,
+          ticket.id,
+          mountDataContact,
+          msg
+        );
+        triggerFlowRan = true;
+      }
     }
   }
 
-  const dateTicket = new Date(
-    isFirstMsg?.updatedAt ? isFirstMsg.updatedAt : ""
-  );
-
-  const dateNow = new Date();
-  const diferencaEmMilissegundos = Math.abs(
-    differenceInMilliseconds(dateTicket, dateNow)
-  );
-  //const seisHorasEmMilissegundos = 21600000;
-  const seisHorasEmMilissegundos = 0;
-
-  logger.info(listPhrase.filter(item => item.phrase.toLowerCase()));
-  logger.info(isFirstMsg);
-
-  // Flow with not found phrase
-  if (
-    listPhrase.filter(item => item.phrase.toLowerCase() === body.toLowerCase()).length === 0 &&
-    diferencaEmMilissegundos >= seisHorasEmMilissegundos &&
-    isFirstMsg
-  ) {
-    console.log("2427", "handleMessageIntegration");
-
-    const flow = await FlowBuilderModel.findOne({
-      where: {
-        id: whatsapp.flowIdNotPhrase
+  // ── Sistema legado: flowIdWelcome / flowIdNotPhrase ───────────────────────
+  // Usado apenas quando nenhum fluxo com trigger está configurado.
+  if (!triggerFlowRan) {
+    // Welcome flow (primeira mensagem do contato)
+    if (!isFirstMsg && !phraseMatched) {
+      const flow = await FlowBuilderModel.findOne({ where: { id: whatsapp.flowIdWelcome } });
+      if (flow) {
+        const mountDataContact = { number: contact.number, name: contact.name, email: contact.email };
+        await ActionsWebhookService(
+          whatsapp.id, whatsapp.flowIdWelcome, ticket.companyId,
+          flow.flow["nodes"], flow.flow["connections"],
+          flow.flow["nodes"][0].id, null, "", "", null,
+          ticket.id, mountDataContact, msg
+        );
       }
-    });
+    }
 
-    if (flow) {
-      const nodes: INodes[] = flow.flow["nodes"];
-      const connections: IConnections[] = flow.flow["connections"];
-
-      const mountDataContact = {
-        number: contact.number,
-        name: contact.name,
-        email: contact.email
-      };
-
-      await ActionsWebhookService(
-        whatsapp.id,
-        whatsapp.flowIdNotPhrase,
-        ticket.companyId,
-        nodes,
-        connections,
-        flow.flow["nodes"][0].id,
-        null,
-        "",
-        "",
-        null,
-        ticket.id,
-        mountDataContact,
-        msg
-      );
+    // Not-phrase flow (contato retornou, mensagem não bateu nenhuma frase)
+    if (isFirstMsg && !phraseMatched) {
+      const flow = await FlowBuilderModel.findOne({ where: { id: whatsapp.flowIdNotPhrase } });
+      if (flow) {
+        const mountDataContact = { number: contact.number, name: contact.name, email: contact.email };
+        await ActionsWebhookService(
+          whatsapp.id, whatsapp.flowIdNotPhrase, ticket.companyId,
+          flow.flow["nodes"], flow.flow["connections"],
+          flow.flow["nodes"][0].id, null, "", "", null,
+          ticket.id, mountDataContact, msg
+        );
+      }
     }
   }
 
@@ -2746,6 +2785,74 @@ const handleMessage = async (
         contact,
         isFirstMsg
       );
+    }
+
+    // ── Disparo independente por trigger de FlowBuilder ──────────────────────
+    // Roda sem depender de integrationId na conexão — basta o fluxo ter trigger configurado.
+    if (
+      !msg.key.fromMe &&
+      !ticket.isGroup &&
+      !ticket.useIntegration
+    ) {
+      const triggerBody = getBodyMessage(msg);
+      const triggerBodyLower = (triggerBody || "").toLowerCase();
+      const isGroupMsg = (msg.key.remoteJid || "").endsWith("@g.us");
+
+      const activeFlows = await FlowBuilderModel.findAll({
+        where: { company_id: companyId, active: true }
+      });
+      const flowsWithTrigger = activeFlows.filter(f => f.flow?.["trigger"]);
+
+      if (flowsWithTrigger.length > 0) {
+        const triggerListPhrase = await FlowCampaignModel.findAll({ where: { whatsappId: whatsapp.id } });
+        const triggerPhraseMatched = triggerListPhrase.some(item => item.phrase.toLowerCase() === triggerBodyLower);
+
+        if (!triggerPhraseMatched) {
+          const lastTicketDate = isFirstMsg ? new Date((isFirstMsg as any).updatedAt) : null;
+          const todayStr = new Date().toDateString();
+          const isToday = lastTicketDate && lastTicketDate.toDateString() === todayStr;
+
+          let matchedFlow: typeof flowsWithTrigger[0] | undefined;
+
+          matchedFlow = flowsWithTrigger.find(f => {
+            const t = f.flow["trigger"];
+            return t.keyword && Array.isArray(t.keywords) && t.keywords.length > 0 &&
+              t.keywords.some((kw: string) => triggerBodyLower.includes(kw.toLowerCase()));
+          });
+          if (!matchedFlow) matchedFlow = flowsWithTrigger.find(f => f.flow["trigger"].firstEver && !isFirstMsg);
+          if (!matchedFlow) matchedFlow = flowsWithTrigger.find(f => f.flow["trigger"].firstOfDay && isFirstMsg && !isToday);
+          if (!matchedFlow) matchedFlow = flowsWithTrigger.find(f => f.flow["trigger"].any && isFirstMsg);
+
+          if (matchedFlow) {
+            const rules = matchedFlow.flow["rules"] || {};
+            let rulesPassed = true;
+
+            if (!rules.allowGroups && isGroupMsg) rulesPassed = false;
+            if (rulesPassed && rules.noResponseIfOpen && ticket.status === "open") rulesPassed = false;
+            if (rulesPassed && rules.onlyScheduledHours) {
+              const schedule = await VerifyCurrentSchedule(companyId);
+              if (!schedule || !schedule.inActivity) rulesPassed = false;
+            }
+            if (rulesPassed && (rules.noTaggedContacts || rules.noTags || rules.onlyTags)) {
+              const ticketTags = await TicketTag.findAll({ where: { ticketId: ticket.id } });
+              const hasTags = ticketTags.length > 0;
+              if (rules.noTaggedContacts && hasTags) rulesPassed = false;
+              if (rules.noTags && hasTags) rulesPassed = false;
+              if (rules.onlyTags && !hasTags) rulesPassed = false;
+            }
+
+            if (rulesPassed) {
+              const mountDataContact = { number: contact.number, name: contact.name, email: contact.email };
+              await ActionsWebhookService(
+                whatsapp.id, matchedFlow.id, companyId,
+                matchedFlow.flow["nodes"], matchedFlow.flow["connections"],
+                matchedFlow.flow["nodes"][0].id,
+                null, "", "", null, ticket.id, mountDataContact, msg
+              );
+            }
+          }
+        }
+      }
     }
 
     const dontReadTheFirstQuestion = ticket.queue === null;

@@ -20,7 +20,6 @@ import {
   Fade,
   CircularProgress,
   Popover,
-  useTheme,
   Chip,
 } from "@material-ui/core";
 import ForumIcon from "@material-ui/icons/Forum";
@@ -198,11 +197,16 @@ const useStyles = makeStyles((theme) => ({
     opacity: 0.3,
   },
   iconButton: {
-    color: "white",
+    width: 40,
+    height: 40,
+    padding: 0,
+    margin: "0 4px",
+    color: "#fff",
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: 12,
     position: "relative",
-    "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
-    },
+    "&:hover": { backgroundColor: theme.palette.primary.main, opacity: 0.9 },
+    "& .MuiSvgIcon-root": { fontSize: 18, color: "#fff" },
   },
   badge: {
     "& .MuiBadge-badge": {
@@ -304,7 +308,6 @@ const reducer = (state, action) => {
 
 export default function ChatPopover() {
   const classes = useStyles();
-  const theme = useTheme();
   const { user } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);

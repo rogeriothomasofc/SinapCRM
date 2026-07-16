@@ -59,7 +59,7 @@ services:
         REACT_APP_TAB_NAME: "SinapCRM"
     container_name: sinapcrm-frontend
     ports:
-      - "3000:3001"
+      - "3005:3001"
     depends_on:
       - backend
     networks:

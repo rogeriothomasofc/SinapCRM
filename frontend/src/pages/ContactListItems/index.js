@@ -20,12 +20,21 @@ import Button from "@material-ui/core/Button";
 import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
-
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import BlockIcon from "@material-ui/icons/Block";
+import PersonAddIcon from "@material-ui/icons/PersonAdd";
+import Checkbox from "@material-ui/core/Checkbox";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import Avatar from "@material-ui/core/Avatar";
+import Typography from "@material-ui/core/Typography";
+import Box from "@material-ui/core/Box";
 
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
@@ -96,8 +105,212 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  contactRow: {
+    display: "flex",
+    alignItems: "center",
+    padding: "8px 4px",
+    borderRadius: 8,
+    cursor: "pointer",
+    "&:hover": { backgroundColor: "rgba(103,58,183,0.06)" },
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    fontSize: 14,
+    backgroundColor: "#673AB7",
+    marginRight: 12,
+    flexShrink: 0,
+  },
+  contactName: { fontWeight: 500, fontSize: 14, lineHeight: 1.2 },
+  contactNumber: { fontSize: 12, color: "#888" },
+  selectedCount: {
+    fontSize: 13,
+    color: "#673AB7",
+    fontWeight: 600,
+    marginLeft: 8,
+  },
 }));
 
+// ── Modal de seleção de contatos existentes ──────────────────────────────────
+const SelectContactsModal = ({ open, onClose, contactListId, onAdded }) => {
+  const classes = useStyles();
+  const [search, setSearch] = useState("");
+  const [allContacts, setAllContacts] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setSearch("");
+    setSelected([]);
+    setLoading(true);
+    api
+      .get("/contacts", { params: { pageNumber: 1, searchParam: "" } })
+      .then(({ data }) => {
+        setAllContacts(data.contacts || []);
+        setFiltered(data.contacts || []);
+      })
+      .catch(toastError)
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  useEffect(() => {
+    const q = search.toLowerCase();
+    setFiltered(
+      allContacts.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.number || "").includes(q)
+      )
+    );
+  }, [search, allContacts]);
+
+  const toggle = (contact) => {
+    setSelected((prev) =>
+      prev.find((c) => c.id === contact.id)
+        ? prev.filter((c) => c.id !== contact.id)
+        : [...prev, contact]
+    );
+  };
+
+  const isSelected = (contact) => !!selected.find((c) => c.id === contact.id);
+
+  const toggleAll = () => {
+    if (selected.length === filtered.length) {
+      setSelected([]);
+    } else {
+      setSelected([...filtered]);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (selected.length === 0) return;
+    setSaving(true);
+    try {
+      await Promise.all(
+        selected.map((c) =>
+          api.post("/contact-list-items", {
+            name: c.name,
+            number: c.number,
+            email: c.email || "",
+            contactListId,
+          })
+        )
+      );
+      toast.success(`${selected.length} contato(s) adicionado(s) com sucesso!`);
+      onAdded();
+      onClose();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const initials = (name) =>
+    name
+      ? name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+      : "?";
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <span>Selecionar Contatos</span>
+          {selected.length > 0 && (
+            <span className={classes.selectedCount}>
+              {selected.length} selecionado(s)
+            </span>
+          )}
+        </Box>
+      </DialogTitle>
+      <DialogContent dividers style={{ padding: "8px 16px" }}>
+        <TextField
+          fullWidth
+          autoFocus
+          placeholder="Buscar por nome ou número..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          variant="outlined"
+          size="small"
+          style={{ marginBottom: 8 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon style={{ color: "#aaa", fontSize: 18 }} />
+              </InputAdornment>
+            ),
+          }}
+        />
+        {loading ? (
+          <Box display="flex" justifyContent="center" padding={3}>
+            <CircularProgress size={32} />
+          </Box>
+        ) : filtered.length === 0 ? (
+          <Box display="flex" justifyContent="center" padding={3}>
+            <Typography style={{ color: "#aaa" }}>Nenhum contato encontrado</Typography>
+          </Box>
+        ) : (
+          <>
+            <Box
+              className={classes.contactRow}
+              onClick={toggleAll}
+              style={{ borderBottom: "1px solid #f0f0f0", marginBottom: 4 }}
+            >
+              <Checkbox
+                checked={filtered.length > 0 && selected.length === filtered.length}
+                indeterminate={selected.length > 0 && selected.length < filtered.length}
+                color="primary"
+                size="small"
+              />
+              <Typography style={{ fontSize: 13, color: "#555", fontWeight: 600 }}>
+                Selecionar todos ({filtered.length})
+              </Typography>
+            </Box>
+            <Box style={{ maxHeight: 340, overflowY: "auto" }}>
+              {filtered.map((contact) => (
+                <Box
+                  key={contact.id}
+                  className={classes.contactRow}
+                  onClick={() => toggle(contact)}
+                >
+                  <Checkbox
+                    checked={isSelected(contact)}
+                    color="primary"
+                    size="small"
+                  />
+                  <Avatar className={classes.avatar}>{initials(contact.name)}</Avatar>
+                  <Box>
+                    <Typography className={classes.contactName}>{contact.name}</Typography>
+                    <Typography className={classes.contactNumber}>{contact.number}</Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
+      </DialogContent>
+      <DialogActions style={{ padding: "12px 16px" }}>
+        <Button onClick={onClose} disabled={saving}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          color="primary"
+          disabled={selected.length === 0 || saving}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <PersonAddIcon />}
+        >
+          {saving ? "Adicionando..." : `Adicionar ${selected.length > 0 ? `(${selected.length})` : ""}`}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// ── Página principal ──────────────────────────────────────────────────────────
 const ContactListItems = () => {
   const classes = useStyles();
 
@@ -110,16 +323,16 @@ const ContactListItems = () => {
   const [searchParam, setSearchParam] = useState("");
   const [contacts, dispatch] = useReducer(reducer, []);
   const [selectedContactId, setSelectedContactId] = useState(null);
-  const [contactListItemModalOpen, setContactListItemModalOpen] =
-    useState(false);
+  const [contactListItemModalOpen, setContactListItemModalOpen] = useState(false);
+  const [selectContactsOpen, setSelectContactsOpen] = useState(false);
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [contactList, setContactList] = useState({});
+  const [refreshCount, setRefreshCount] = useState(0);
   const fileUploadRef = useRef(null);
 
   const { findById: findContactList } = useContactLists();
-
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
@@ -152,7 +365,7 @@ const ContactListItems = () => {
       fetchContacts();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchParam, pageNumber, contactListId]);
+  }, [searchParam, pageNumber, contactListId, refreshCount]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
@@ -162,24 +375,19 @@ const ContactListItems = () => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_CONTACTS", payload: data.record });
       }
-
       if (data.action === "delete") {
         dispatch({ type: "DELETE_CONTACT", payload: +data.id });
       }
-
       if (data.action === "reload") {
         dispatch({ type: "LOAD_CONTACTS", payload: data.records });
       }
     });
 
-    socket.on(
-      `company-${companyId}-ContactListItem-${contactListId}`,
-      (data) => {
-        if (data.action === "reload") {
-          dispatch({ type: "LOAD_CONTACTS", payload: data.records });
-        }
+    socket.on(`company-${companyId}-ContactListItem-${contactListId}`, (data) => {
+      if (data.action === "reload") {
+        dispatch({ type: "LOAD_CONTACTS", payload: data.records });
       }
-    );
+    });
 
     return () => {
       socket.disconnect();
@@ -231,6 +439,13 @@ const ContactListItems = () => {
     }
   };
 
+  const handleAfterSelect = () => {
+    dispatch({ type: "RESET" });
+    setPageNumber(1);
+    setSearchParam("");
+    setRefreshCount(c => c + 1);
+  };
+
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -254,13 +469,17 @@ const ContactListItems = () => {
         onClose={handleCloseContactListItemModal}
         aria-labelledby="form-dialog-title"
         contactId={selectedContactId}
-      ></ContactListItemModal>
+      />
+      <SelectContactsModal
+        open={selectContactsOpen}
+        onClose={() => setSelectContactsOpen(false)}
+        contactListId={contactListId}
+        onAdded={handleAfterSelect}
+      />
       <ConfirmationModal
         title={
           deletingContact
-            ? `${i18n.t("contactListItems.confirmationModal.deleteTitle")} ${
-                deletingContact.name
-              }?`
+            ? `${i18n.t("contactListItems.confirmationModal.deleteTitle")} ${deletingContact.name}?`
             : `${i18n.t("contactListItems.confirmationModal.importTitlte")}`
         }
         open={confirmOpen}
@@ -289,7 +508,7 @@ const ContactListItems = () => {
           </Grid>
           <Grid xs={12} sm={7} item>
             <Grid spacing={2} container>
-              <Grid xs={12} sm={6} item>
+              <Grid xs={12} sm={4} item>
                 <TextField
                   fullWidth
                   placeholder={i18n.t("contactListItems.searchPlaceholder")}
@@ -306,19 +525,14 @@ const ContactListItems = () => {
                 />
               </Grid>
               <Grid xs={4} sm={2} item>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  onClick={goToContactLists}
-                >
+                <Button fullWidth variant="outlined" color="primary" onClick={goToContactLists}>
                   {i18n.t("contactListItems.buttons.lists")}
                 </Button>
               </Grid>
               <Grid xs={4} sm={2} item>
                 <Button
                   fullWidth
-                  variant="contained"
+                  variant="outlined"
                   color="primary"
                   onClick={() => {
                     fileUploadRef.current.value = null;
@@ -328,14 +542,15 @@ const ContactListItems = () => {
                   {i18n.t("contactListItems.buttons.import")}
                 </Button>
               </Grid>
-              <Grid xs={4} sm={2} item>
+              <Grid xs={4} sm={4} item>
                 <Button
                   fullWidth
                   variant="contained"
                   color="primary"
-                  onClick={handleOpenContactListItemModal}
+                  onClick={() => setSelectContactsOpen(true)}
+                  startIcon={<PersonAddIcon />}
                 >
-                  {i18n.t("contactListItems.buttons.add")}
+                  Adicionar
                 </Button>
               </Grid>
             </Grid>
@@ -354,28 +569,18 @@ const ContactListItems = () => {
             name="file"
             type="file"
             accept=".xls,.xlsx"
-            onChange={() => {
-              setConfirmOpen(true);
-            }}
+            onChange={() => setConfirmOpen(true)}
             ref={fileUploadRef}
           />
         </>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center" style={{ width: "0%" }}>
-                #
-              </TableCell>
+              <TableCell align="center" style={{ width: "0%" }}>#</TableCell>
               <TableCell>{i18n.t("contactListItems.table.name")}</TableCell>
-              <TableCell align="center">
-                {i18n.t("contactListItems.table.number")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("contactListItems.table.email")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("contactListItems.table.actions")}
-              </TableCell>
+              <TableCell align="center">{i18n.t("contactListItems.table.number")}</TableCell>
+              <TableCell align="center">{i18n.t("contactListItems.table.email")}</TableCell>
+              <TableCell align="center">{i18n.t("contactListItems.table.actions")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -385,15 +590,9 @@ const ContactListItems = () => {
                   <TableCell align="center" style={{ width: "0%" }}>
                     <IconButton>
                       {contact.isWhatsappValid ? (
-                        <CheckCircleIcon
-                          titleAccess="Whatsapp Válido"
-                          htmlColor="green"
-                        />
+                        <CheckCircleIcon titleAccess="Whatsapp Válido" htmlColor="green" />
                       ) : (
-                        <BlockIcon
-                          titleAccess="Whatsapp Inválido"
-                          htmlColor="grey"
-                        />
+                        <BlockIcon titleAccess="Whatsapp Inválido" htmlColor="grey" />
                       )}
                     </IconButton>
                   </TableCell>
@@ -401,10 +600,7 @@ const ContactListItems = () => {
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => hadleEditContact(contact.id)}
-                    >
+                    <IconButton size="small" onClick={() => hadleEditContact(contact.id)}>
                       <EditIcon />
                     </IconButton>
                     <Can
