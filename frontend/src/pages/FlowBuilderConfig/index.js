@@ -1329,7 +1329,7 @@ const FlowBuilderConfig = () => {
                 borderRadius: 10,
                 boxShadow: "0 6px 24px rgba(103,58,183,0.15), 0 2px 6px rgba(0,0,0,0.08)",
                 width: 280,
-                maxHeight: "calc(100vh - 180px)",
+                maxHeight: "calc(100vh - 300px)",
                 overflowY: "auto",
                 border: "1px solid rgba(103,58,183,0.12)",
               }}>
@@ -1506,7 +1506,7 @@ const FlowBuilderConfig = () => {
                 borderRadius: 10,
                 boxShadow: "0 6px 24px rgba(103,58,183,0.15), 0 2px 6px rgba(0,0,0,0.08)",
                 width: 300,
-                maxHeight: "calc(100vh - 200px)",
+                maxHeight: "calc(100vh - 300px)",
                 overflowY: "auto",
                 border: "1px solid rgba(103,58,183,0.12)",
               }}>
