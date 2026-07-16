@@ -1177,6 +1177,17 @@ const FlowBuilderConfig = () => {
             }}
             proOptions={{ hideAttribution: true }}
           >
+            {/* Controles de navegação e MiniMap */}
+            <Controls />
+            <MiniMap />
+            <Background
+              variant="dots"
+              gap={15}
+              size={1}
+              color="#CCCCCC"
+              style={{ opacity: 0.4 }}
+            />
+          </ReactFlow>
             {/* Menu button */}
             <Box 
               className={classes.menuToggle}
@@ -1640,17 +1651,6 @@ const FlowBuilderConfig = () => {
               </Box>
             )}
 
-            {/* Controles de navegação e MiniMap */}
-            <Controls />
-            <MiniMap />
-            <Background
-              variant="dots"
-              gap={15}
-              size={1}
-              color="#CCCCCC"
-              style={{ opacity: 0.4 }}
-            />
-          </ReactFlow>
         </Box>
       )}
 
