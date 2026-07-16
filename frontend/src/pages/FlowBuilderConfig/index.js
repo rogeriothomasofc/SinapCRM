@@ -1169,7 +1169,6 @@ const FlowBuilderConfig = () => {
               backgroundColor: "#F8F9FA",
               border: "1px solid #e0e0e0",
               borderRadius: "12px",
-              overflow: "hidden"
             }}
             edgeTypes={edgeTypes}
             defaultEdgeOptions={{
@@ -1197,7 +1196,7 @@ const FlowBuilderConfig = () => {
                 borderRadius: 10,
                 boxShadow: "0 6px 24px rgba(103,58,183,0.15), 0 2px 6px rgba(0,0,0,0.08)",
                 width: 220,
-                maxHeight: "calc(100vh - 120px)",
+                maxHeight: "calc(100vh - 200px)",
                 overflowY: "auto",
                 border: "1px solid rgba(103,58,183,0.12)",
                 animation: "fadeIn 0.2s ease",
