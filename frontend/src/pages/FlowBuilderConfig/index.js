@@ -152,9 +152,8 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 13,
     fontWeight: 500,
   },
-  menuToggle: {
+  floatBtn: {
     position: "absolute",
-    top: 16,
     left: 16,
     zIndex: 1001,
     backgroundColor: "white",
@@ -167,6 +166,11 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     cursor: "pointer",
     boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    transition: "all 0.2s ease",
+  },
+  floatBtnActive: {
+    backgroundColor: "#673AB7",
+    color: "white",
   },
 }));
 
@@ -1189,8 +1193,9 @@ const FlowBuilderConfig = () => {
             />
           </ReactFlow>
             {/* Menu button */}
-            <Box 
-              className={classes.menuToggle}
+            <Box
+              className={`${classes.floatBtn} ${menuOpen ? classes.floatBtnActive : ""}`}
+              style={{ top: 16 }}
               onClick={() => { setMenuOpen(p => !p); setTriggerPanelOpen(false); setRulesPanelOpen(false); }}
             >
               <MenuIcon />
@@ -1307,24 +1312,9 @@ const FlowBuilderConfig = () => {
 
             {/* Botão Acionamentos */}
             <Box
+              className={`${classes.floatBtn} ${triggerPanelOpen ? classes.floatBtnActive : ""}`}
+              style={{ top: 70 }}
               onClick={() => { setTriggerPanelOpen(p => !p); setMenuOpen(false); setRulesPanelOpen(false); }}
-              style={{
-                position: "absolute",
-                top: 70,
-                left: 16,
-                zIndex: 1001,
-                backgroundColor: triggerPanelOpen ? "#673AB7" : "white",
-                color: triggerPanelOpen ? "white" : "#673AB7",
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                transition: "all 0.2s ease",
-              }}
             >
               <FlashOnIcon fontSize="small" />
             </Box>
@@ -1484,24 +1474,9 @@ const FlowBuilderConfig = () => {
 
             {/* Botão Regras */}
             <Box
-              onClick={() => { setRulesPanelOpen(!rulesPanelOpen); setTriggerPanelOpen(false); setMenuOpen(false); }}
-              style={{
-                position: "absolute",
-                top: 124,
-                left: 16,
-                zIndex: 1001,
-                backgroundColor: rulesPanelOpen ? "#673AB7" : "white",
-                color: rulesPanelOpen ? "white" : "#673AB7",
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                transition: "all 0.2s ease",
-              }}
+              className={`${classes.floatBtn} ${rulesPanelOpen ? classes.floatBtnActive : ""}`}
+              style={{ top: 124 }}
+              onClick={() => { setRulesPanelOpen(p => !p); setTriggerPanelOpen(false); setMenuOpen(false); }}
             >
               <RuleIcon fontSize="small" />
             </Box>
