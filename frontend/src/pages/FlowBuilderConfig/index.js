@@ -1026,7 +1026,7 @@ const FlowBuilderConfig = () => {
   }, [simInput, simMessages, simCurrentNode, nodes, edges, continueFrom, checkTrigger]);
 
   return (
-    <MainContainer style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+    <MainContainer style={{ display: "flex", flexDirection: "column", padding: 0, overflow: "visible" }}>
       {/* Modais de configuração */}
       <FlowBuilderAddTextModal open={modalAddText} onSave={textAdd} data={dataNode} onUpdate={updateNode} close={setModalAddText} />
       <FlowBuilderIntervalModal open={modalAddInterval} onSave={intervalAdd} data={dataNode} onUpdate={updateNode} close={setModalAddInterval} />

@@ -18,12 +18,12 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const MainContainer = ({ children }) => {
+const MainContainer = ({ children, style }) => {
 	const classes = useStyles();
 
 	return (
 		<Container className={classes.mainContainer}>
-			<div className={classes.contentWrapper}>{children}</div>
+			<div className={classes.contentWrapper} style={style}>{children}</div>
 		</Container>
 	);
 };
