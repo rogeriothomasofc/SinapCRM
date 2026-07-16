@@ -1196,7 +1196,7 @@ const FlowBuilderConfig = () => {
                 borderRadius: 10,
                 boxShadow: "0 6px 24px rgba(103,58,183,0.15), 0 2px 6px rgba(0,0,0,0.08)",
                 width: 220,
-                maxHeight: "calc(100vh - 200px)",
+                maxHeight: "calc(100vh - 300px)",
                 overflowY: "auto",
                 border: "1px solid rgba(103,58,183,0.12)",
                 animation: "fadeIn 0.2s ease",
@@ -1219,8 +1219,8 @@ const FlowBuilderConfig = () => {
                   </IconButton>
                 </Box>
 
-                <Box style={{ padding: "8px 10px 10px" }}>
-                  <Typography style={{ fontSize: 10, fontWeight: 700, color: "#BDBDBD", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>
+                <Box style={{ padding: "6px 8px 8px" }}>
+                  <Typography style={{ fontSize: 9, fontWeight: 700, color: "#BDBDBD", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>
                     Adicionar bloco
                   </Typography>
 
@@ -1229,8 +1229,8 @@ const FlowBuilderConfig = () => {
                       key={item.type}
                       style={{
                         display: "flex", alignItems: "center",
-                        padding: "7px 10px",
-                        marginBottom: 4,
+                        padding: "5px 8px",
+                        marginBottom: 3,
                         borderRadius: 6,
                         backgroundColor: "#FAFAFA",
                         border: "1px solid #EFEFEF",
@@ -1253,12 +1253,12 @@ const FlowBuilderConfig = () => {
                       }}
                     >
                       <Box style={{
-                        width: 28, height: 28,
+                        width: 24, height: 24,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        borderRadius: 6,
+                        borderRadius: 5,
                         backgroundColor: item.bgColor,
                         color: item.color,
-                        marginRight: 10,
+                        marginRight: 8,
                         flexShrink: 0,
                       }}>
                         {item.icon}
