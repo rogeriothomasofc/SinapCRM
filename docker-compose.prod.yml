@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        - STACK_NAME=sinapcrm
+        - ENABLE_FINANCIAL=false
+        - GERENCIANET_PIX_CERT=production-cert
+    container_name: sinapcrm-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+      - ws-proxy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=https://api.sinapcrm.com
+        - REACT_APP_HOURS_CLOSE_TICKETS_AUTO=24
+        - STACK_NAME=sinapcrm
+        - REACT_APP_COLOR=
+        - REACT_APP_TAB_NAME=SinapCRM
+    container_name: sinapcrm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - ws-proxy
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: sinapcrm-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: sinapcrm-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+  ws-proxy:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
