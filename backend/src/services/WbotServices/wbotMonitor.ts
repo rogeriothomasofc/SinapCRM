@@ -111,17 +111,30 @@ const wbotMonitor = async (
       }
     });
 
-    // Mapeamento @lid → número real fornecido pelo WhatsApp quando o contato compartilha o número
+    // Mapeamento @lid → número real fornecido pelo WhatsApp quando o contato compartilha o número.
+    // Cobre três casos:
+    // 1. Contato já existe com número real → só atualiza lidJid
+    // 2. Contato existe com dígitos do lid como número provisório → atualiza para o número real
+    // 3. Contato não existe ainda → cria com número real e lidJid
     wbot.ev.on("chats.phoneNumberShare" as any, async ({ lid, jid }: { lid: string; jid: string }) => {
       try {
         const number = jid.replace(/\D/g, "");
         if (!number) return;
         const { Op } = require("sequelize");
-        const existing = await Contact.findOne({ where: { companyId, [Op.or]: [{ number }, { lidJid: lid }] } });
+        const lidDigits = lid.replace("@lid", "");
+
+        // Procura por número real, lidJid ou número provisório (dígitos do lid)
+        const existing = await Contact.findOne({
+          where: {
+            companyId,
+            [Op.or]: [{ number }, { lidJid: lid }, { number: lidDigits }],
+          },
+        });
+
         if (existing) {
-          await existing.update({ lidJid: lid });
+          // Atualiza para o número real e garante lidJid
+          await existing.update({ number, lidJid: lid });
         } else {
-          // Contato não existe ainda — cria para que mensagens @lid possam ser resolvidas
           await CreateOrUpdateContactService({
             name: number,
             number,

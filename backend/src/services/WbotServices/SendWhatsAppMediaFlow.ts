@@ -9,6 +9,7 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Ticket from "../../models/Ticket";
 import mime from "mime-types";
 import Contact from "../../models/Contact";
+import getContactJid from "../../helpers/getContactJid";
 
 interface Request {
   media: Express.Multer.File;
@@ -72,9 +73,9 @@ export const typeSimulation = async (ticket: Ticket, presence: WAPresence) => {
     }
   });
 
-  await wbot.sendPresenceUpdate(presence, `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+  await wbot.sendPresenceUpdate(presence, getContactJid(contact, ticket.isGroup));
   await delay(5000);
-  await wbot.sendPresenceUpdate('paused', `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`);
+  await wbot.sendPresenceUpdate('paused', getContactJid(contact, ticket.isGroup));
 
 }
 
@@ -154,7 +155,7 @@ const SendWhatsAppMediaFlow = async ({
     });
 
     const sentMessage = await wbot.sendMessage(
-      `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+      getContactJid(contact, ticket.isGroup),
       {
         ...options
       }

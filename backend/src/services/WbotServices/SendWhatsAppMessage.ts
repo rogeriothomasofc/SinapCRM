@@ -5,6 +5,7 @@ import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import getContactJid from "../../helpers/getContactJid";
 
 import formatBody from "../../helpers/Mustache";
 
@@ -21,9 +22,7 @@ const SendWhatsAppMessage = async ({
 }: Request): Promise<WAMessage> => {
   let options = {};
   const wbot = await GetTicketWbot(ticket);
-  const number = `${ticket.contact.number}@${
-    ticket.isGroup ? "g.us" : "s.whatsapp.net"
-  }`;
+  const number = getContactJid(ticket.contact, ticket.isGroup);
 
   if (quotedMsg) {
       const chatMessages = await Message.findOne({

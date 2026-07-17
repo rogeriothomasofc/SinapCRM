@@ -2329,11 +2329,20 @@ const handleMessage = async (
 
     if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
 
-    // @lid: tenta resolver para o JID real via campo lidJid do contato no DB
+    // @lid: resolve o JID real via campo lidJid do contato no DB.
+    // Se não houver mapeamento, usa os dígitos do lid como número provisório para não
+    // perder a mensagem — o contato será atualizado quando chats.phoneNumberShare disparar.
+    let pendingLidJid: string | null = null;
     if (msgContact.id?.endsWith("@lid")) {
-      const lidContact = await Contact.findOne({ where: { lidJid: msgContact.id, companyId } });
-      if (!lidContact) return;
-      msgContact = { id: `${lidContact.number}@s.whatsapp.net`, name: lidContact.name };
+      const lidJid = msgContact.id;
+      const lidContact = await Contact.findOne({ where: { lidJid, companyId } });
+      if (lidContact) {
+        msgContact = { id: `${lidContact.number}@s.whatsapp.net`, name: lidContact.name };
+      } else {
+        const lidDigits = lidJid.replace("@lid", "");
+        msgContact = { id: `${lidDigits}@s.whatsapp.net`, name: msgContact.name || lidDigits };
+        pendingLidJid = lidJid;
+      }
     }
 
     if (isGroup) {
@@ -2347,6 +2356,11 @@ const handleMessage = async (
 
     const whatsapp = await ShowWhatsAppService(wbot.id!, companyId);
     const contact = await verifyContact(msgContact, wbot, companyId);
+
+    // Persiste lidJid no contato provisório criado acima
+    if (pendingLidJid && !contact.lidJid) {
+      await contact.update({ lidJid: pendingLidJid });
+    }
 
     let unreadMessages = 0;
 
