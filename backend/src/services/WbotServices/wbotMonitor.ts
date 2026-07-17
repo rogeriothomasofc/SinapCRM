@@ -120,6 +120,16 @@ const wbotMonitor = async (
         const existing = await Contact.findOne({ where: { companyId, [Op.or]: [{ number }, { lidJid: lid }] } });
         if (existing) {
           await existing.update({ lidJid: lid });
+        } else {
+          // Contato não existe ainda — cria para que mensagens @lid possam ser resolvidas
+          await CreateOrUpdateContactService({
+            name: number,
+            number,
+            isGroup: false,
+            companyId,
+            whatsappId: whatsapp.id,
+            lidJid: lid,
+          });
         }
       } catch (err) {
         logger.warn(`chats.phoneNumberShare: erro ao salvar lidJid ${lid}: ${err.message}`);
