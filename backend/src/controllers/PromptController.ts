@@ -8,6 +8,7 @@ import UpdatePromptService from "../services/PromptServices/UpdatePromptService"
 import Whatsapp from "../models/Whatsapp";
 import { verify } from "jsonwebtoken";
 import authConfig from "../config/auth";
+import { Configuration, OpenAIApi } from "openai";
 
 interface TokenPayload {
   id: string;
@@ -109,6 +110,59 @@ export const remove = async (
     return res.status(200).json({ message: "Prompt deleted" });
   } catch (err) {
     return res.status(500).json({ message: "Não foi possível excluir! Verifique se este prompt está sendo usado!" });
+  }
+};
+
+export const togglePrompt = async (req: Request, res: Response): Promise<Response> => {
+  const { promptId } = req.params;
+  const authHeader = req.headers.authorization;
+  const [, token] = authHeader.split(" ");
+  const decoded = verify(token, authConfig.secret);
+  const { companyId } = decoded as TokenPayload;
+
+  const prompt = await ShowPromptService({ promptId, companyId });
+  if (!prompt) return res.status(404).json({ message: "Prompt não encontrado" });
+
+  await prompt.update({ isActive: !prompt.isActive });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit("prompt", {
+    action: "update",
+    prompt
+  });
+
+  return res.status(200).json(prompt);
+};
+
+export const testPrompt = async (req: Request, res: Response): Promise<Response> => {
+  const { promptId } = req.params;
+  const { message } = req.body;
+  const authHeader = req.headers.authorization;
+  const [, token] = authHeader.split(" ");
+  const decoded = verify(token, authConfig.secret);
+  const { companyId } = decoded as TokenPayload;
+
+  const prompt = await ShowPromptService({ promptId, companyId });
+  if (!prompt) return res.status(404).json({ message: "Prompt não encontrado" });
+
+  try {
+    const configuration = new Configuration({ apiKey: prompt.apiKey });
+    const openai = new OpenAIApi(configuration);
+
+    const chat = await openai.createChatCompletion({
+      model: prompt.model || "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: prompt.prompt },
+        { role: "user", content: message }
+      ],
+      temperature: prompt.temperature || 1,
+      max_tokens: prompt.maxTokens || 1000,
+    });
+
+    const response = chat.data.choices[0]?.message?.content;
+    return res.status(200).json({ response });
+  } catch (err) {
+    return res.status(500).json({ message: "Erro ao chamar a IA", error: String(err) });
   }
 };
 

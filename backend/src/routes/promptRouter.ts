@@ -15,4 +15,8 @@ promptRoutes.put("/prompt/:promptId", isAuth, PromptController.update);
 
 promptRoutes.delete("/prompt/:promptId", isAuth, PromptController.remove);
 
+promptRoutes.patch("/prompt/:promptId/toggle", isAuth, PromptController.togglePrompt);
+
+promptRoutes.post("/prompt/:promptId/test", isAuth, PromptController.testPrompt);
+
 export default promptRoutes;

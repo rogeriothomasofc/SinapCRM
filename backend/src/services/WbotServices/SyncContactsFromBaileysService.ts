@@ -36,6 +36,8 @@ const SyncContactsFromBaileysService = async ({ whatsappId }: Request): Promise<
     try {
       if (!c.id) { skipped++; continue; }
       if (c.id.endsWith("@broadcast") || c.id === "status@broadcast") { skipped++; continue; }
+      // @lid são identificadores internos do WhatsApp, não números de telefone
+      if (c.id.endsWith("@lid")) { skipped++; continue; }
 
       const isGroup = c.id.endsWith("@g.us");
       const number = c.id.replace(/[^0-9]/g, "");

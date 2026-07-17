@@ -542,7 +542,7 @@ const verifyContact = async (
     profilePicUrl = `${process.env.FRONTEND_URL}/nopicture.png`;
   }
 
-  const contactData = {
+  const contactData: any = {
     name: msgContact?.name || msgContact.id.replace(/\D/g, ""),
     number: msgContact.id.replace(/\D/g, ""),
     profilePicUrl,
@@ -2329,6 +2329,13 @@ const handleMessage = async (
 
     if (msgIsGroupBlock?.value === "enabled" && isGroup) return;
 
+    // @lid: tenta resolver para o JID real via campo lidJid do contato no DB
+    if (msgContact.id?.endsWith("@lid")) {
+      const lidContact = await Contact.findOne({ where: { lidJid: msgContact.id, companyId } });
+      if (!lidContact) return;
+      msgContact = { id: `${lidContact.number}@s.whatsapp.net`, name: lidContact.name };
+    }
+
     if (isGroup) {
       const grupoMeta = await wbot.groupMetadata(msg.key.remoteJid);
       const msgGroupContact = {
@@ -3091,9 +3098,21 @@ const wbotMessageListener = async (
       });
     });
 
-    // wbot.ev.on("messages.set", async (messageSet: IMessage) => {
-    //   messageSet.messages.filter(filterMessages).map(msg => msg);
-    // });
+    // Quando o WhatsApp mapeia lid → número real, atualiza o contato
+    wbot.ev.on("chats.phoneNumberShare" as any, async (phoneShares: { lid: string; jid: string }[]) => {
+      for (const share of phoneShares) {
+        try {
+          const realNumber = share.jid.replace(/\D/g, "");
+          const contact = await Contact.findOne({ where: { lidJid: share.lid, companyId } });
+          if (contact && contact.number !== realNumber) {
+            await contact.update({ number: realNumber });
+          }
+        } catch (e) {
+          Sentry.captureException(e);
+        }
+      }
+    });
+
   } catch (error) {
     Sentry.captureException(error);
     logger.error(`Error handling wbot message listener. Err: ${error}`);

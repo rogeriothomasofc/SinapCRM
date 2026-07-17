@@ -16,6 +16,7 @@ interface Request {
   companyId: number;
   extraInfo?: ExtraInfo[];
   whatsappId?: number;
+  lidJid?: string;
 }
 
 const CreateOrUpdateContactService = async ({
@@ -26,28 +27,39 @@ const CreateOrUpdateContactService = async ({
   email = "",
   companyId,
   extraInfo = [],
-  whatsappId
+  whatsappId,
+  lidJid
 }: Request): Promise<Contact> => {
   const number = isGroup ? rawNumber : rawNumber.replace(/[^0-9]/g, "");
+
+  // @lid IDs do WhatsApp chegam como sequências de 15+ dígitos — nenhum número real E.164 excede 13 dígitos na prática
+  if (!isGroup && number.length >= 15) {
+    throw new Error(`Número inválido (possível @lid): ${number}`);
+  }
 
   const io = getIO();
   let contact: Contact | null;
 
-  contact = await Contact.findOne({
-    where: {
-      number,
-      companyId
-    }
-  });
+  // Se temos um lidJid, procura por ele primeiro para evitar duplicatas
+  if (lidJid) {
+    const { Op } = require("sequelize");
+    contact = await Contact.findOne({
+      where: {
+        companyId,
+        [Op.or]: [{ lidJid }, { number }]
+      }
+    });
+  } else {
+    contact = await Contact.findOne({
+      where: { number, companyId }
+    });
+  }
 
   if (contact) {
-    contact.update({ profilePicUrl });
-    console.log(contact.whatsappId)
-    if (isNil(contact.whatsappId === null)) {
-      contact.update({
-        whatsappId
-      });
-    }
+    const updateData: any = { profilePicUrl };
+    if (lidJid && !contact.lidJid) updateData.lidJid = lidJid;
+    if (!isNil(contact.whatsappId === null)) updateData.whatsappId = whatsappId;
+    contact.update(updateData);
     io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
       action: "update",
       contact
@@ -61,7 +73,8 @@ const CreateOrUpdateContactService = async ({
       isGroup,
       extraInfo,
       companyId,
-      whatsappId
+      whatsappId,
+      lidJid
     });
 
     io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {

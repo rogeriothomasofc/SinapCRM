@@ -53,6 +53,9 @@ class Prompt extends Model<Prompt> {
   @Column
   model: string;
 
+  @Column({ defaultValue: true })
+  isActive: boolean;
+
   @AllowNull
   @ForeignKey(() => Queue)
   @Column

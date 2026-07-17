@@ -111,6 +111,21 @@ const wbotMonitor = async (
       }
     });
 
+    // Mapeamento @lid → número real fornecido pelo WhatsApp quando o contato compartilha o número
+    wbot.ev.on("chats.phoneNumberShare" as any, async ({ lid, jid }: { lid: string; jid: string }) => {
+      try {
+        const number = jid.replace(/\D/g, "");
+        if (!number) return;
+        const { Op } = require("sequelize");
+        const existing = await Contact.findOne({ where: { companyId, [Op.or]: [{ number }, { lidJid: lid }] } });
+        if (existing) {
+          await existing.update({ lidJid: lid });
+        }
+      } catch (err) {
+        logger.warn(`chats.phoneNumberShare: erro ao salvar lidJid ${lid}: ${err.message}`);
+      }
+    });
+
     wbot.ev.on("contacts.upsert", async (contacts: BContact[]) => {
 
       await createOrUpdateBaileysService({
@@ -122,6 +137,7 @@ const wbotMonitor = async (
         try {
           if (!bContact.id) continue;
           if (bContact.id.endsWith("@broadcast")) continue;
+          if (bContact.id.endsWith("@lid")) continue;
 
           const isGroup = bContact.id.endsWith("@g.us");
           const number = bContact.id.replace(/\D/g, "");
@@ -135,6 +151,7 @@ const wbotMonitor = async (
             isGroup,
             companyId,
             whatsappId: whatsapp.id,
+            lidJid: bContact.lid,
           });
         } catch (err) {
           logger.warn(`contacts.upsert: erro ao sincronizar contato ${bContact.id}: ${err.message}`);

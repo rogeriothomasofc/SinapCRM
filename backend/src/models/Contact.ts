@@ -83,6 +83,9 @@ class Contact extends Model<Contact> {
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;
+
+  @Column
+  lidJid: string;
 }
 
 export default Contact;

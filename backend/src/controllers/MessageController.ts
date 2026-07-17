@@ -123,6 +123,9 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
     const companyId = whatsapp.companyId;
 
     const CheckValidNumber = await CheckContactNumber(numberToTest, companyId);
+    if (CheckValidNumber.jid.endsWith("@lid")) {
+      throw new AppError("Número inválido: este contato usa identificador interno do WhatsApp. Verifique o número de telefone.");
+    }
     const number = CheckValidNumber.jid.replace(/\D/g, "");
     const profilePicUrl = await GetProfilePicUrl(
       number,

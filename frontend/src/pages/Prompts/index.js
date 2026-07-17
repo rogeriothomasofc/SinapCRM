@@ -16,6 +16,13 @@ import {
   Fade,
   useTheme,
   CircularProgress,
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemText,
 } from "@material-ui/core";
 
 import SearchIcon from "@material-ui/icons/Search";
@@ -24,6 +31,8 @@ import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
 import DescriptionIcon from "@material-ui/icons/Description";
 import LocalOfferIcon from "@material-ui/icons/LocalOffer";
+import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
+import SendIcon from "@material-ui/icons/Send";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -215,6 +224,47 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 500,
     color: theme.palette.text.secondary,
   },
+  chatDialogTitle: {
+    backgroundColor: theme.palette.primary.main,
+    color: "#fff",
+    padding: theme.spacing(1.5, 2),
+    "& h2": { fontSize: "1rem", fontWeight: 500 },
+  },
+  chatMessages: {
+    minHeight: 300,
+    maxHeight: 400,
+    overflowY: "auto",
+    padding: theme.spacing(1),
+    backgroundColor: theme.palette.background.default,
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(0.5),
+  },
+  chatBubbleUser: {
+    alignSelf: "flex-end",
+    backgroundColor: theme.palette.primary.main,
+    color: "#fff",
+    borderRadius: "12px 12px 2px 12px",
+    padding: theme.spacing(0.75, 1.5),
+    maxWidth: "75%",
+    fontSize: "0.875rem",
+  },
+  chatBubbleAi: {
+    alignSelf: "flex-start",
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    borderRadius: "12px 12px 12px 2px",
+    padding: theme.spacing(0.75, 1.5),
+    maxWidth: "75%",
+    fontSize: "0.875rem",
+    border: `1px solid ${theme.palette.divider}`,
+  },
+  chatInputRow: {
+    display: "flex",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1),
+    borderTop: `1px solid ${theme.palette.divider}`,
+  },
 }));
 
 const Prompts = () => {
@@ -229,6 +279,11 @@ const Prompts = () => {
   const [promptModalOpen, setPromptModalOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [testChatOpen, setTestChatOpen] = useState(false);
+  const [testPromptId, setTestPromptId] = useState(null);
+  const [testMessages, setTestMessages] = useState([]);
+  const [testInput, setTestInput] = useState("");
+  const [testLoading, setTestLoading] = useState(false);
   const { user } = useContext(AuthContext);
   const { getPlanCompany } = usePlans();
   const companyId = user.companyId;
@@ -321,7 +376,38 @@ const Prompts = () => {
     setSelectedPrompt(null);
   };
 
-  const filteredPrompts = prompts.filter(prompt => 
+  const handleToggleActive = async (prompt) => {
+    try {
+      const { data } = await api.patch(`/prompt/${prompt.id}/toggle`);
+      dispatch({ type: "UPDATE_PROMPTS", payload: data });
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const handleOpenTest = (prompt) => {
+    setTestPromptId(prompt.id);
+    setTestMessages([]);
+    setTestInput("");
+    setTestChatOpen(true);
+  };
+
+  const handleSendTest = async () => {
+    if (!testInput.trim() || testLoading) return;
+    const userMsg = testInput.trim();
+    setTestMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    setTestInput("");
+    setTestLoading(true);
+    try {
+      const { data } = await api.post(`/prompt/${testPromptId}/test`, { message: userMsg });
+      setTestMessages(prev => [...prev, { role: "ai", text: data.response }]);
+    } catch (err) {
+      setTestMessages(prev => [...prev, { role: "ai", text: "Erro ao obter resposta da IA." }]);
+    }
+    setTestLoading(false);
+  };
+
+  const filteredPrompts = prompts.filter(prompt =>
     prompt.name.toLowerCase().includes(searchParam.toLowerCase()) ||
     (prompt.queue?.name && prompt.queue.name.toLowerCase().includes(searchParam.toLowerCase()))
   );
@@ -430,6 +516,25 @@ const Prompts = () => {
                   </Box>
 
                   <Box className={classes.actionButtons}>
+                    <Tooltip title={prompt.isActive ? "Desativar IA" : "Ativar IA"}>
+                      <Switch
+                        size="small"
+                        checked={!!prompt.isActive}
+                        onChange={() => handleToggleActive(prompt)}
+                        color="primary"
+                      />
+                    </Tooltip>
+
+                    <Tooltip title="Testar IA">
+                      <IconButton
+                        size="small"
+                        className={classes.iconButton}
+                        onClick={() => handleOpenTest(prompt)}
+                      >
+                        <ChatBubbleOutlineIcon />
+                      </IconButton>
+                    </Tooltip>
+
                     <Tooltip title="Editar prompt">
                       <IconButton
                         size="small"
@@ -465,6 +570,51 @@ const Prompts = () => {
           </Box>
         )}
       </Paper>
+      <Dialog open={testChatOpen} onClose={() => setTestChatOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle className={classes.chatDialogTitle} disableTypography>
+          <Typography variant="subtitle1" style={{ color: "#fff", fontWeight: 500 }}>
+            Testar IA
+          </Typography>
+        </DialogTitle>
+        <DialogContent style={{ padding: 0 }}>
+          <Box className={classes.chatMessages}>
+            {testMessages.length === 0 && (
+              <Typography variant="caption" style={{ alignSelf: "center", opacity: 0.5, marginTop: 8 }}>
+                Envie uma mensagem para testar o prompt
+              </Typography>
+            )}
+            {testMessages.map((msg, i) => (
+              <Box
+                key={i}
+                className={msg.role === "user" ? classes.chatBubbleUser : classes.chatBubbleAi}
+              >
+                {msg.text}
+              </Box>
+            ))}
+            {testLoading && (
+              <Box className={classes.chatBubbleAi} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CircularProgress size={14} /> Digitando...
+              </Box>
+            )}
+          </Box>
+          <Box className={classes.chatInputRow}>
+            <TextField
+              fullWidth
+              size="small"
+              variant="outlined"
+              placeholder="Digite uma mensagem..."
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSendTest()}
+              disabled={testLoading}
+            />
+            <IconButton color="primary" onClick={handleSendTest} disabled={testLoading || !testInput.trim()}>
+              <SendIcon />
+            </IconButton>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
     </MainContainer>
   );
 };
